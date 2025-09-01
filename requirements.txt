@@ -1,6 +1,5 @@
+streamlit
 firebase-admin
 requests
 python-dotenv
 graphviz
-streamlit
- 
