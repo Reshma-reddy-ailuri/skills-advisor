@@ -6,20 +6,19 @@ import requests
 import os
 from dotenv import load_dotenv
 
-# Initialize Firebase Admin safely to avoid duplicate initialization error
+# Load Gemini API Key from environment variable or Streamlit secrets
+load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
+
+# Initialize Firebase Admin SDK using service account from Streamlit secrets
+firebase_creds_str = st.secrets["FIREBASE_SERVICE_ACCOUNT"]
+firebase_creds_dict = json.loads(firebase_creds_str)
+
 if not firebase_admin._apps:
-    cred = credentials.Certificate(
-        r"C:\Users\DELL\OneDrive\Desktop\skills-advisor\skills-advisor-firebase-adminsdk-fbsvc-8f3131e8fb.json"
-    )
+    cred = credentials.Certificate(firebase_creds_dict)
     firebase_admin.initialize_app(cred)
-else:
-    print("Firebase app already initialized")
 
 db = firestore.client()
-
-# Load Gemini API Key from .env
-load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 
 def get_ai_response(prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
