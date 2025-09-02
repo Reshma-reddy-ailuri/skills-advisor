@@ -114,8 +114,8 @@ def split_sections(text):
 
 def extract_json_block(text):
     text = text.strip()
-    start_token = "```json"
-    end_token = "```"
+    start_token = "json"
+    end_token = ""
     if text.startswith(start_token):
         text = text[len(start_token):].strip()
     if text.endswith(end_token):
@@ -146,13 +146,11 @@ def render_graphviz_roadmap(roadmap_json):
 def get_checklist_items(practice_text):
     return [line[2:].strip() for line in practice_text.split('\n') if line.strip().startswith("- ")]
 
+# Fix checklist persistence - DO NOT assign st.session_state after checkbox
 def checklist_with_persistence(items):
     for i, item in enumerate(items):
         key = f"practice_{i}"
-        if key not in st.session_state:
-            st.session_state[key] = False
-        checked = st.checkbox(item, value=st.session_state[key], key=key)
-        st.session_state[key] = checked
+        st.checkbox(item, key=key)
 
 def render_learning_resources(text):
     lines = text.strip().split("\n")
@@ -246,7 +244,7 @@ sections = split_sections(ai_response)
 
 tabs = st.tabs(["Career Suggestions", "Roadmap", "Skill Gap Analysis", "Learning Resources", "Practice Websites", "Job Search Platforms"])
 
-with tabs[0]:
+with tabs:
     st.header("Career Suggestions")
     st.markdown(sections["career"].strip())
 
