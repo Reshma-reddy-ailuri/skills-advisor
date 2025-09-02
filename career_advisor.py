@@ -254,15 +254,15 @@ sections = split_sections(ai_response)
 
 tabs = st.tabs(["Career Suggestions", "Roadmap", "Skill Gap Analysis", "Learning Resources", "Practice Websites", "Job Search Platforms"])
 
-with tabs:
+with tabs[0]:
     st.header("Career Suggestions")
     render_career_suggestions(sections["career"].strip())
 
-with tabs:
+with tabs[1]:
     st.header("Roadmap")
     render_graphviz_roadmap(sections["roadmap"])
 
-with tabs:
+with tabs[2]:
     st.header("Skill Gap Analysis & Practice Plan")
     checklist_items = get_checklist_items(sections["skill_gap"])
     if checklist_items:
@@ -271,18 +271,18 @@ with tabs:
     else:
         st.markdown(sections["skill_gap"].strip())
 
-with tabs:
+with tabs[3]:
     st.header("Learning Resources")
     if sections["learning"].strip():
         render_learning_resources(sections["learning"])
     else:
         st.info("No learning resources found.")
 
-with tabs:
+with tabs[4]:
     st.header("Practice Websites")
     st.markdown(sections["practice_websites"], unsafe_allow_html=True)
 
-with tabs:
+with tabs[5]:
     st.header("Job Search Platforms")
     job_links = get_job_platform_links(skills_text, location)
     for platform, url in job_links.items():
