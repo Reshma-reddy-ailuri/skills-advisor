@@ -6,68 +6,19 @@ import requests
 import os
 from dotenv import load_dotenv
 
-# Load Gemini API Key and initialize Firebase
+# Load Gemini API Key from environment variable or Streamlit secrets
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
+
+# Initialize Firebase Admin SDK using service account from Streamlit secrets
 firebase_creds_str = st.secrets["FIREBASE_SERVICE_ACCOUNT"]
 firebase_creds_dict = json.loads(firebase_creds_str)
 
 if not firebase_admin._apps:
     cred = credentials.Certificate(firebase_creds_dict)
     firebase_admin.initialize_app(cred)
+
 db = firestore.client()
-
-def sidebar_login():
-    st.sidebar.header("User Login")
-    if "user_email" not in st.session_state:
-        st.session_state.user_email = ""
-    email = st.sidebar.text_input("Enter your email", value=st.session_state.user_email)
-    login_button = st.sidebar.button("Login")
-    logout_button = st.sidebar.button("Logout")
-    if login_button and email:
-        st.session_state.user_email = email
-        st.sidebar.success(f"Logged in as {email}")
-    if logout_button:
-        st.session_state.user_email = ""
-
-sidebar_login()
-
-if not st.session_state.user_email:
-    st.info("Please login using the sidebar to continue.")
-    st.stop()
-
-user_id = st.session_state.user_email
-
-st.markdown("""
-<style>
-[data-testid="stSidebar"] {
-    background-color: #f3e5f5;
-    color: #37474f;
-    padding: 24px 20px 40px 20px !important;
-    font-weight: 600;
-    min-width: 320px !important;
-    border: none !important;
-}
-.block-container {
-    background-color: #f9fdfa;
-    padding: 32px 48px 48px 48px !important;
-    max-width: 900px;
-    margin: auto;
-    font-size: 1.1rem;
-    color: #37474f;
-}
-h2, h3 {
-    color: #4db6ac;
-    padding-bottom: 8px;
-}
-ul {
-    padding-left: 1.5rem;
-}
-li {
-    margin-bottom: 12px;
-}
-</style>
-""", unsafe_allow_html=True)
 
 def get_ai_response(prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
@@ -76,7 +27,7 @@ def get_ai_response(prompt):
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.7,
-            "maxOutputTokens": 1600,
+            "maxOutputTokens": 1024,
             "topP": 1,
             "topK": 1
         }
@@ -87,100 +38,126 @@ def get_ai_response(prompt):
         try:
             return resp["candidates"][0]["content"]["parts"][0]["text"]
         except Exception as e:
-            return f"Could not parse AI response: {e}"
+            return f"Error parsing AI response: {e}\nFull response: {resp}"
     else:
-        return f"API error: {response.status_code}"
+        return f"API Error: {response.status_code} - {response.text}"
 
 def split_sections(text):
-    sections = {"career": "", "roadmap": "", "skill_gap": "", "learning": "", "practice_websites": ""}
-    current = None
+    sections = {"career": "", "roadmap": "", "skill_gap": "", "learning": ""}
+    current_section = None
     for line in text.splitlines():
-        if line.strip() == "===Career Suggestions===":
-            current = "career"
-        elif line.strip() == "===Roadmap===":
-            current = "roadmap"
-        elif line.strip() == "===Skill Gap Analysis & Practice Plan===":
-            current = "skill_gap"
-        elif line.strip() == "===Learning Resources===":
-            current = "learning"
-        elif line.strip() == "===Practice Websites===":
-            current = "practice_websites"
-        elif current is not None:
-            sections[current] += line + "\n"
+        line_strip = line.strip()
+        if line_strip == "===Career Suggestions===":
+            current_section = "career"
+        elif line_strip == "===Roadmap===":
+            current_section = "roadmap"
+        elif line_strip == "===Skill Gap Analysis & Practice Plan===":
+            current_section = "skill_gap"
+        elif line_strip == "===Learning Resources===":
+            current_section = "learning"
+        elif current_section:
+            sections[current_section] += line + "\n"
     return sections
 
-def extract_json_block(text):
-    text = text.strip()
-    start_token = "json"
-    end_token = ""
-    if text.startswith(start_token):
-        text = text[len(start_token):].strip()
-    if text.endswith(end_token):
-        text = text[:-len(end_token)].strip()
-    return text
-
-def render_graphviz_roadmap(roadmap_json):
-    roadmap_json = extract_json_block(roadmap_json)
-    if not roadmap_json:
-        st.info("No roadmap data available yet.")
-        return
+def parse_roadmap_json(raw_json):
     try:
-        data = json.loads(roadmap_json)
-        if not data:
-            st.info("Roadmap JSON is empty.")
-            return
-        from graphviz import Digraph
-        dot = Digraph(node_attr={'style': 'filled', 'fillcolor': '#ade8f4', 'fontname': 'Segoe UI'})
-        dot.attr(rankdir='LR', size='8,5')
-        for step in data:
-            num = str(step.get("step_number", "?"))
-            label = f"{step.get('title', '')}\n({step.get('expected_duration_weeks', '?')} weeks)"
-            dot.node(num, label)
-        for i in range(len(data)-1):
-            dot.edge(str(data[i].get("step_number", "?")), str(data[i+1].get("step_number", "?")))
-        st.graphviz_chart(dot)
+        start_idx = raw_json.find('[')
+        end_idx = raw_json.rfind(']') + 1
+        json_str = raw_json[start_idx:end_idx]
+        roadmap = json.loads(json_str)
+        return roadmap
     except Exception as e:
-        st.error(f"Could not draw roadmap: {e}")
-        st.text_area("Raw roadmap data (please verify format):", roadmap_json, height=200)
+        st.error(f"Error decoding roadmap JSON: {e}")
+        st.text_area("Raw Roadmap JSON:", raw_json, height=200)
+        return None
 
-def get_checklist_items(practice_text):
-    return [line[2:].strip() for line in practice_text.split('\n') if line.strip().startswith("- ")]
+def render_graphviz_roadmap(roadmap):
+    if not roadmap:
+        st.warning("Roadmap data unavailable or invalid.")
+        return
+    from graphviz import Digraph
+    dot = Digraph(comment="Career Roadmap")
+    for step in roadmap:
+        label = f"Step {step.get('step_number', '?')}\n{step.get('title', 'No title')}\n({step.get('expected_duration_weeks', '?')} weeks)"
+        dot.node(str(step.get('step_number', '?')), label)
+    for i in range(len(roadmap)-1):
+        dot.edge(str(roadmap[i].get('step_number', '?')), str(roadmap[i+1].get('step_number', '?')))
+    st.graphviz_chart(dot)
 
-def checklist_with_persistence(items):
-    # Display checkboxes with unique keys so Streamlit manages state automatically
-    for i, item in enumerate(items):
-        key = f"practice_{i}"
-        st.checkbox(item, key=key)
-
-def render_learning_resources(text):
-    lines = text.strip().split("\n")
-    md_lines = []
-    for line in lines:
+def get_checklist_items(text):
+    items = []
+    for line in text.split('\n'):
         line = line.strip()
-        if line:
-            if line.startswith("- ") or line.startswith("* "):
-                md_lines.append(line)
-            else:
-                md_lines.append(f"- {line}")
-    st.markdown("\n".join(md_lines))
+        if line.startswith("- "):
+            items.append(line[2:].strip())
+    return items
 
-def render_career_suggestions(text):
-    # Remove any secondary bullets and make one-level list
-    lines = [line.lstrip("-* \t").strip() for line in text.splitlines() if line.strip()]
-    st.markdown("\n".join(f"- {line}" for line in lines))
-def generate_linkedin_job_url(keywords, location):
-    base_url = "https://www.linkedin.com/jobs/search/"
-    query = f"?keywords={keywords.replace(' ', '%20')}&location={location.replace(' ', '%20')}"
-    return base_url + query
+def init_checklist_states(num_items):
+    if "practice_states" not in st.session_state:
+        st.session_state.practice_states = {}
+    for idx in range(num_items):
+        key = f"practice_{idx}"
+        if key not in st.session_state.practice_states:
+            st.session_state.practice_states[key] = False
 
-def get_job_platform_links(keywords, location):
-    return {
-        "LinkedIn Jobs": generate_linkedin_job_url(keywords, location),
-        "Unstop Jobs": f"https://unstop.com/jobs?search={keywords.replace(' ', '%20')}&location={location.replace(' ', '%20')}",
-        "Hiring Cloud": f"https://hiringcloud.in/jobs?query={keywords.replace(' ', '%20')}"
-    }
+def display_practice_checklist(practice_text):
+    st.write("### Practice Plan Checklist")
+    checklist_items = get_checklist_items(practice_text)
+    if not checklist_items:
+        st.write("No checklist items found; showing full practice plan below:")
+        st.text_area("Practice Plan", practice_text, height=250)
+        return
 
-st.header("AI-Powered Career Advisor with Referrals")
+    init_checklist_states(len(checklist_items))
+
+    for idx, item in enumerate(checklist_items):
+        key = f"practice_{idx}"
+        checked = st.checkbox(item, value=st.session_state.practice_states[key], key=key)
+        st.session_state.practice_states[key] = checked
+
+# Firestore save/load functions
+def save_progress(user_id, practice_states):
+    doc_ref = db.collection("users").document(user_id)
+    doc_ref.set({"practice_progress": practice_states}, merge=True)
+    st.success("Practice progress saved to Firestore!")
+
+def load_progress(user_id):
+    doc_ref = db.collection("users").document(user_id)
+    doc = doc_ref.get()
+    if doc.exists:
+        data = doc.to_dict()
+        return data.get("practice_progress", {})
+    return {}
+
+# Simple login simulation for demo (replace with real login later)
+def simple_login():
+    st.sidebar.header("User Authentication")
+    email = st.sidebar.text_input("Email")
+    if "user_email" not in st.session_state:
+        st.session_state.user_email = None
+    if st.sidebar.button("Login"):
+        if email:
+            st.session_state.user_email = email
+            st.success(f"Logged in as {email}")
+        else:
+            st.error("Enter an email to login.")
+    if st.session_state.user_email:
+        st.sidebar.write(f"Logged in: {st.session_state.user_email}")
+        if st.sidebar.button("Logout"):
+            st.session_state.user_email = None
+            st.experimental_rerun()
+
+simple_login()
+
+if not st.session_state.get("user_email"):
+    st.warning("Please login from the sidebar to continue.")
+    st.stop()
+
+user_id = st.session_state.user_email  # use email as user_id for demo
+
+# Main app UI
+st.set_page_config(page_title="AI Career Advisor with Firestore", layout="wide")
+st.title("AI-Powered Career Advisor with Firestore Persistence")
 
 with st.sidebar:
     st.header("Profile Information")
@@ -201,27 +178,33 @@ with st.sidebar:
     goals = st.text_input("Career Goals")
 
     submit = st.button("Get Career Advice")
+    if submit:
+        st.session_state.generated = True
+        st.session_state.age = age
+        st.session_state.location = location
+        st.session_state.education = education
+        st.session_state.skills_text = skills_text
+        st.session_state.interests = interests
+        st.session_state.goals = goals
 
-if not submit:
-    st.info("Fill profile and click 'Get Career Advice' to generate suggestions.")
+if not st.session_state.get("generated", False):
+    st.info("Please fill in your profile and click 'Get Career Advice' to begin.")
     st.stop()
 
 prompt = f"""
-I am a {age}-year-old student from {location}, India.
-My education background: {education}.
-My skills with proficiency levels: {skills_text}.
-My interests include: {interests}.
-My career goals are: {goals}.
+I am a {st.session_state.age}-year-old student from {st.session_state.location}, India.
+My education background: {st.session_state.education}.
+My skills with proficiency levels: {st.session_state.skills_text}.
+My interests include: {st.session_state.interests}.
+My career goals are: {st.session_state.goals}.
 
-Please provide the output in the following exact sections:
+Please respond with the following sections with EXACT headers:
 
 ===Career Suggestions===
-Provide exactly 3 career suggestions, each as a bullet point like:
-- Career Name: brief explanation.
+[List 3 career paths with explanations.]
 
 ===Roadmap===
-Provide ONLY a valid JSON array (no extra text) for the roadmap steps as below:
-
+[Provide ONLY a valid JSON array with steps like:
 [
   {{
     "step_number": 1,
@@ -231,59 +214,52 @@ Provide ONLY a valid JSON array (no extra text) for the roadmap steps as below:
   }},
   ...
 ]
+Do NOT add extra text outside JSON in this section.]
 
 ===Skill Gap Analysis & Practice Plan===
-List skills to develop and provide a bullet point practice plan.
+[Describe skills to develop and provide a bullet-pointed practice plan starting each point exactly with a dash and a space ("- ").]
 
 ===Learning Resources===
-List relevant courses, books, or tutorials as bullet points.
+[List relevant courses, books, or tutorials.]
 
-===Practice Websites===
-List practice websites with markdown links like [site](url).
-
-No extra text outside these sections.
+Include only these sections with headers, no extra text.
 """
 
-ai_response = get_ai_response(prompt)
-sections = split_sections(ai_response)
+with st.spinner("Generating career advice..."):
+    ai_response = get_ai_response(prompt)
 
-tabs = st.tabs(["Career Suggestions", "Roadmap", "Skill Gap Analysis", "Learning Resources", "Practice Websites", "Job Search Platforms"])
+sections = split_sections(ai_response)
+roadmap_raw = sections.get("roadmap", "").strip()
+roadmap = parse_roadmap_json(roadmap_raw)
+
+tabs = st.tabs(["Career Suggestions", "Visual Roadmap", "Skill Gap Analysis & Practice Plan", "Learning Resources"])
 
 with tabs[0]:
-    st.header("Career Suggestions")
-    render_career_suggestions(sections["career"].strip())
+    st.markdown("### Career Suggestions")
+    st.text_area("Career Suggestions", sections.get("career", "No suggestions available."), height=300, key="career_suggestions")
 
 with tabs[1]:
-    st.header("Roadmap")
-    render_graphviz_roadmap(sections["roadmap"])
+    st.markdown("### Career Roadmap")
+    render_graphviz_roadmap(roadmap)
 
 with tabs[2]:
-    st.header("Skill Gap Analysis & Practice Plan")
-    checklist_items = get_checklist_items(sections["skill_gap"])
-    if checklist_items:
-        st.write("Practice Plan Checklist:")
-        checklist_with_persistence(checklist_items)
-        # Optionally add extra instructions or options below checklist
-        extra_options = sections["skill_gap"].split("\n")
-        # Remove checklist items lines to isolate extras
-        extras = [line for line in extra_options if not line.strip().startswith("- ")]
-        if extras:
-            st.markdown("\n".join(extras))
-    else:
-        st.markdown(sections["skill_gap"].strip())
+    st.markdown("### Skill Gap Analysis & Practice Plan")
+    practice_text = sections.get("skill_gap", "No practice plan found.")
+    display_practice_checklist(practice_text)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Save Practice Progress"):
+            save_progress(user_id, st.session_state.practice_states)
+    with col2:
+        if st.button("Load Practice Progress"):
+            loaded = load_progress(user_id)
+            if loaded:
+                st.session_state.practice_states = loaded
+                st.experimental_rerun()
+            else:
+                st.warning("No saved progress found.")
+
 with tabs[3]:
-    st.header("Learning Resources")
-    if sections["learning"].strip():
-        render_learning_resources(sections["learning"])
-    else:
-        st.info("No learning resources found.")
-
-with tabs[4]:
-    st.header("Practice Websites")
-    st.markdown(sections["practice_websites"], unsafe_allow_html=True)
-
-with tabs[5]:
-    st.header("Job Search Platforms")
-    job_links = get_job_platform_links(skills_text, location)
-    for platform, url in job_links.items():
-        st.markdown(f"- [{platform}]({url})", unsafe_allow_html=True)
+    st.markdown("### Learning Resources")
+    st.text_area("Learning Resources", sections.get("learning", "No learning resources found."), height=300)
