@@ -17,7 +17,6 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 db = firestore.client()
 
-# No explicit login rerun for now; simple sidebar login fields
 def sidebar_login():
     st.sidebar.header("User Login")
     if "user_email" not in st.session_state:
@@ -28,10 +27,10 @@ def sidebar_login():
 
     if login_button and email:
         st.session_state.user_email = email
-        st.success(f"Logged in as {email}")
+        st.sidebar.success(f"Logged in as {email}")
     if logout_button:
         st.session_state.user_email = ""
-        st.experimental_rerun()
+        # Without experimental_rerun, page refresh is manual
 
 sidebar_login()
 
@@ -39,60 +38,18 @@ if not st.session_state.user_email:
     st.info("Please login using the sidebar to continue.")
     st.stop()
 
-user_id = st.session_state.user_email  # Using email as user id for simplicity
+user_id = st.session_state.user_email
 
-# CSS palette for styling (same as before)
+# Styling for more spacing and web-like look
 st.markdown("""
-<style>
-[data-testid="stSidebar"] {
-    background: #ede7f6;
-    color: #37474f;
-    border-right: 3px solid #80cbc4;
-    padding: 20px 25px 50px 25px !important;
-    font-weight: 600;
-    min-width: 320px !important;
-}
-[data-testid="stSidebar"] input,
-[data-testid="stSidebar"] textarea,
-[data-testid="stSidebar"] select {
-    border-radius: 10px !important;
-    border: 1.5px solid #b2dfdb !important;
-    padding: 10px 14px !important;
-    margin-bottom: 16px !important;
-    font-size: 15px !important;
-    color: #37474f !important;
-}
-.stButton > button {
-    background-color: #4db6ac;
-    color: white !important;
-    border-radius: 14px;
-    padding: 14px 40px;
-    margin-top: 18px !important;
-}
-.css-1d391kg {
-    max-width: 900px !important;
-    margin: 0 auto !important;
-    padding: 32px 24px !important;
-}
-[role="tabpanel"] {
-    border: 1.5px solid #b2dfdb;
-    border-radius: 14px;
-    padding: 20px;
-    background-color: #f9fdfa;
-    margin-bottom: 30px;
-}
-textarea {
-    background-color: #f1fafe;
-    border-radius: 14px;
-    border: 1.5px solid #b2dfdb;
-    padding: 14px 20px;
-    min-height: 280px;
-    resize: vertical;
-    box-shadow: inset 0 0 10px rgba(128, 203, 196, 0.2);
-}
-</style>
+    <style>
+    .block-container {padding-top: 2rem !important;}
+    .stTabs { margin-bottom: 1.5rem !important;}
+    section[data-testid="stHorizontalBlock"] > div { padding: 1.2rem 2rem;}
+    h1, .stTabs [role="tab"] { font-size: 2rem; }
+    .stMarkdown { font-size: 1.1rem; }
+    </style>
 """, unsafe_allow_html=True)
-
 
 def get_ai_response(prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
@@ -133,6 +90,24 @@ def split_sections(text):
         elif current:
             sections[current] += line + "\n"
     return sections
+
+def render_graphviz_roadmap(roadmap_json):
+    try:
+        data = json.loads(roadmap_json)
+        from graphviz import Digraph
+        dot = Digraph()
+        for step in data:
+            num = str(step["step_number"])
+            label = f'''{step["title"]}\n({step["expected_duration_weeks"]} weeks)'''
+            dot.node(num, label)
+        for i in range(len(data)-1):
+            dot.edge(str(data[i]["step_number"]), str(data[i+1]["step_number"]))
+        st.graphviz_chart(dot)
+    except Exception as e:
+        st.error(f"Could not draw roadmap: {e}")
+
+def get_checklist_items(practice_text):
+    return [line[2:].strip() for line in practice_text.split('\n') if line.strip().startswith("- ")]
 
 def generate_linkedin_job_url(keywords, location):
     base_url = "https://www.linkedin.com/jobs/search/"
@@ -215,27 +190,33 @@ sections = split_sections(ai_response)
 tabs = st.tabs(["Career Suggestions", "Roadmap", "Skill Gap Analysis", "Learning Resources", "Practice Websites", "Job Search Platforms"])
 
 with tabs[0]:
-    st.subheader("Career Suggestions")
-    st.text_area("Suggestions", sections["career"], height=300)
+    st.header("Career Suggestions")
+    st.markdown(sections["career"].strip())
 
 with tabs[1]:
-    st.subheader("Roadmap")
-    st.text_area("Roadmap JSON", sections["roadmap"], height=300)
+    st.header("Roadmap")
+    render_graphviz_roadmap(sections["roadmap"].strip())
 
 with tabs[2]:
-    st.subheader("Skill Gap Analysis & Practice Plan")
-    st.text_area("Practice Plan", sections["skill_gap"], height=300)
+    st.header("Skill Gap Analysis & Practice Plan")
+    checklist_items = get_checklist_items(sections["skill_gap"])
+    if checklist_items:
+        st.write("Practice Plan Checklist:")
+        for i, item in enumerate(checklist_items):
+            st.checkbox(item, key=f"practice_{i}")
+    else:
+        st.markdown(sections["skill_gap"].strip())
 
 with tabs[3]:
-    st.subheader("Learning Resources")
-    st.text_area("Learning Resources", sections["learning"], height=300)
+    st.header("Learning Resources")
+    st.markdown(sections["learning"].strip())
 
 with tabs[4]:
-    st.subheader("Practice Websites")
+    st.header("Practice Websites")
     st.markdown(sections["practice_websites"], unsafe_allow_html=True)
 
 with tabs[5]:
-    st.subheader("Job Search Platforms")
+    st.header("Job Search Platforms")
     job_links = get_job_platform_links(skills_text, location)
     for platform, url in job_links.items():
         st.markdown(f"- [{platform}]({url})", unsafe_allow_html=True)
