@@ -24,13 +24,11 @@ def sidebar_login():
     email = st.sidebar.text_input("Enter your email", value=st.session_state.user_email)
     login_button = st.sidebar.button("Login")
     logout_button = st.sidebar.button("Logout")
-
     if login_button and email:
         st.session_state.user_email = email
         st.sidebar.success(f"Logged in as {email}")
     if logout_button:
         st.session_state.user_email = ""
-        # Manual refresh needed after logout
 
 sidebar_login()
 
@@ -40,7 +38,6 @@ if not st.session_state.user_email:
 
 user_id = st.session_state.user_email
 
-# CSS pastel palette with padding, no borders on content areas
 st.markdown("""
 <style>
 [data-testid="stSidebar"] {
@@ -124,11 +121,14 @@ def extract_json_block(text):
 
 def render_graphviz_roadmap(roadmap_json):
     roadmap_json = extract_json_block(roadmap_json)
-    if not roadmap_json.strip():
+    if not roadmap_json:
         st.info("No roadmap data available yet.")
         return
     try:
         data = json.loads(roadmap_json)
+        if not data:
+            st.info("Roadmap JSON is empty.")
+            return
         from graphviz import Digraph
         dot = Digraph(node_attr={'style': 'filled', 'fillcolor': '#ade8f4', 'fontname': 'Segoe UI'})
         dot.attr(rankdir='LR', size='8,5')
@@ -141,12 +141,11 @@ def render_graphviz_roadmap(roadmap_json):
         st.graphviz_chart(dot)
     except Exception as e:
         st.error(f"Could not draw roadmap: {e}")
-        st.text_area("Raw roadmap data:", roadmap_json, height=200)
+        st.text_area("Raw roadmap data (please verify format):", roadmap_json, height=200)
 
 def get_checklist_items(practice_text):
     return [line[2:].strip() for line in practice_text.split('\n') if line.strip().startswith("- ")]
 
-# Fix checklist persistence - DO NOT assign st.session_state after checkbox
 def checklist_with_persistence(items):
     for i, item in enumerate(items):
         key = f"practice_{i}"
@@ -163,6 +162,16 @@ def render_learning_resources(text):
             else:
                 md_lines.append(f"- {line}")
     st.markdown("\n".join(md_lines))
+
+def render_career_suggestions(text):
+    lines = [line.strip() for line in text.split('\n') if line.strip()]
+    if len(lines) == 1:
+        # Likely one paragraph, split by ". "
+        parts = lines.split(". ")
+        bullets = [p.strip() for p in parts if p.strip()]
+        st.markdown("\n".join(f"- {b}" for b in bullets))
+    else:
+        st.markdown("\n".join(f"- {line}" for line in lines))
 
 def generate_linkedin_job_url(keywords, location):
     base_url = "https://www.linkedin.com/jobs/search/"
@@ -209,13 +218,15 @@ My skills with proficiency levels: {skills_text}.
 My interests include: {interests}.
 My career goals are: {goals}.
 
-Please respond with the following sections with EXACT headers:
+Please provide the output in the following exact sections:
 
 ===Career Suggestions===
-[List 3 career paths with explanations.]
+Provide exactly 3 career suggestions, each as a bullet point like:
+- Career Name: brief explanation.
 
 ===Roadmap===
-[Provide ONLY a valid JSON array with steps like:
+Provide ONLY a valid JSON array (no extra text) for the roadmap steps as below:
+
 [
   {{
     "step_number": 1,
@@ -225,18 +236,17 @@ Please respond with the following sections with EXACT headers:
   }},
   ...
 ]
-Do NOT add extra text outside JSON in this section.]
 
 ===Skill Gap Analysis & Practice Plan===
-[Describe skills to develop and provide a bullet-pointed practice plan starting each point exactly with a dash and a space ("- ").]
+List skills to develop and provide a bullet point practice plan.
 
 ===Learning Resources===
-[List relevant courses, books, or tutorials.]
+List relevant courses, books, or tutorials as bullet points.
 
 ===Practice Websites===
-[List relevant practice websites with markdown links like [site](url).]
+List practice websites with markdown links like [site](url).
 
-Include only these sections with headers, no extra text.
+No extra text outside these sections.
 """
 
 ai_response = get_ai_response(prompt)
@@ -244,18 +254,15 @@ sections = split_sections(ai_response)
 
 tabs = st.tabs(["Career Suggestions", "Roadmap", "Skill Gap Analysis", "Learning Resources", "Practice Websites", "Job Search Platforms"])
 
-with tabs[0]:
+with tabs:
     st.header("Career Suggestions")
-    st.markdown(sections["career"].strip())
+    render_career_suggestions(sections["career"].strip())
 
-with tabs[1]:
+with tabs:[1]
     st.header("Roadmap")
-    roadmap_json = extract_json_block(sections["roadmap"])
-    st.write("Raw roadmap JSON received from AI:")
-    st.text(roadmap_json)  # Show raw JSON for debugging
-    render_graphviz_roadmap(roadmap_json)
+    render_graphviz_roadmap(sections["roadmap"])
 
-with tabs[2]:
+with tabs:
     st.header("Skill Gap Analysis & Practice Plan")
     checklist_items = get_checklist_items(sections["skill_gap"])
     if checklist_items:
@@ -264,18 +271,18 @@ with tabs[2]:
     else:
         st.markdown(sections["skill_gap"].strip())
 
-with tabs[3]:
+with tabs:
     st.header("Learning Resources")
     if sections["learning"].strip():
         render_learning_resources(sections["learning"])
     else:
         st.info("No learning resources found.")
 
-with tabs[4]:
+with tabs:
     st.header("Practice Websites")
     st.markdown(sections["practice_websites"], unsafe_allow_html=True)
 
-with tabs[5]:
+with tabs:
     st.header("Job Search Platforms")
     job_links = get_job_platform_links(skills_text, location)
     for platform, url in job_links.items():
