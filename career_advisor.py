@@ -55,7 +55,7 @@ def simple_login():
 
 simple_login()
 
-# Inject soothing color palette CSS only after login
+# Soothing pastel color palette CSS after login
 st.markdown("""
 <style>
 [data-testid="stSidebar"] {
@@ -193,7 +193,7 @@ def get_ai_response(prompt):
         "contents": [{"parts": [{"text": prompt}]}],
         "generationConfig": {
             "temperature": 0.7,
-            "maxOutputTokens": 1024,
+            "maxOutputTokens": 1600,
             "topP": 1,
             "topK": 1
         }
@@ -209,7 +209,8 @@ def get_ai_response(prompt):
         return f"API Error: {response.status_code} - {response.text}"
 
 def split_sections(text):
-    sections = {"career": "", "roadmap": "", "skill_gap": "", "learning": ""}
+    # Extended to include Practice Websites section
+    sections = {"career": "", "roadmap": "", "skill_gap": "", "learning": "", "practice_websites": ""}
     current_section = None
     for line in text.splitlines():
         line_strip = line.strip()
@@ -221,6 +222,8 @@ def split_sections(text):
             current_section = "skill_gap"
         elif line_strip == "===Learning Resources===":
             current_section = "learning"
+        elif line_strip == "===Practice Websites===":
+            current_section = "practice_websites"
         elif current_section:
             sections[current_section] += line + "\n"
     return sections
@@ -292,8 +295,26 @@ def load_progress(user_id):
         return data.get("practice_progress", {})
     return {}
 
-st.set_page_config(page_title="AI Career Advisor with Firestore", layout="wide")
-st.title("AI-Powered Career Advisor with Firestore Persistence")
+def generate_linkedin_job_url(keywords, location):
+    base_url = "https://www.linkedin.com/jobs/search/"
+    query = f"?keywords={keywords.replace(' ', '%20')}&location={location.replace(' ', '%20')}"
+    return base_url + query
+
+def get_job_platform_links(keywords, location):
+    linkedin_url = generate_linkedin_job_url(keywords, location)
+    unstop_url = f"https://unstop.com/jobs?search={keywords.replace(' ', '%20')}&location={location.replace(' ', '%20')}"
+    hiring_cloud_url = f"https://hiringcloud.in/jobs?query={keywords.replace(' ', '%20')}"
+
+    return {
+        "LinkedIn Jobs": linkedin_url,
+        "Unstop Jobs": unstop_url,
+        "Hiring Cloud": hiring_cloud_url
+    }
+
+st.set_page_config(page_title="AI Career Advisor with Firestore & Job Search", layout="wide")
+st.title("AI-Powered Career Advisor with Firestore and Job Search APIs")
+
+user_id = st.session_state.user_email  # as user_id for demo
 
 with st.sidebar:
     st.header("Profile Information")
@@ -358,6 +379,9 @@ Do NOT add extra text outside JSON in this section.]
 ===Learning Resources===
 [List relevant courses, books, or tutorials.]
 
+===Practice Websites===
+[List relevant practice websites with markdown links like [site](url).]
+
 Include only these sections with headers, no extra text.
 """
 
@@ -368,7 +392,7 @@ sections = split_sections(ai_response)
 roadmap_raw = sections.get("roadmap", "").strip()
 roadmap = parse_roadmap_json(roadmap_raw)
 
-tabs = st.tabs(["Career Suggestions", "Visual Roadmap", "Skill Gap Analysis & Practice Plan", "Learning Resources"])
+tabs = st.tabs(["Career Suggestions", "Visual Roadmap", "Skill Gap Analysis & Practice Plan", "Learning Resources", "Practice Websites", "Job Search Platforms"])
 
 with tabs[0]:
     st.markdown("### Career Suggestions")
@@ -386,10 +410,10 @@ with tabs[2]:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Save Practice Progress"):
-            save_progress(st.secrets["USER_ID"], st.session_state.practice_states)
+            save_progress(user_id, st.session_state.practice_states)
     with col2:
         if st.button("Load Practice Progress"):
-            loaded = load_progress(st.secrets["USER_ID"])
+            loaded = load_progress(user_id)
             if loaded:
                 st.session_state.practice_states = loaded
                 st.experimental_rerun()
@@ -399,3 +423,14 @@ with tabs[2]:
 with tabs[3]:
     st.markdown("### Learning Resources")
     st.text_area("Learning Resources", sections.get("learning", "No learning resources found."), height=300)
+
+with tabs[4]:
+    st.markdown("### Practice Websites")
+    links_md = sections.get("practice_websites", "No practice websites found.")
+    st.markdown(links_md, unsafe_allow_html=True)
+
+with tabs[5]:
+    st.markdown("### Job Search Platforms")
+    job_links = get_job_platform_links(st.session_state.skills_text or "", st.session_state.location or "")
+    for platform, url in job_links.items():
+        st.markdown(f"- [{platform}]({url})", unsafe_allow_html=True)
