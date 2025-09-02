@@ -296,7 +296,6 @@ def load_progress(user_id):
     return {}
 
 def simple_login():
-    # Safely wrap rerun with button callback
     if "user_email" not in st.session_state:
         st.session_state.user_email = None
 
@@ -305,15 +304,17 @@ def simple_login():
         st.markdown('<div id="login-box">', unsafe_allow_html=True)
         st.markdown('<h2>Welcome! Please Login</h2>', unsafe_allow_html=True)
 
-        email = st.text_input("Enter your email", key="login_email")
-        login_button = st.button("Login")
+        with st.form(key="login_form"):
+            email = st.text_input("Enter your email", key="login_email")
+            submit_button = st.form_submit_button(label="Login")
 
-        if login_button and email:
-            st.session_state.user_email = email
-            st.experimental_rerun()
-        elif login_button and not email:
-            st.error("Please enter an email to login")
-
+        if submit_button:
+            if email:
+                st.session_state.user_email = email
+                st.experimental_rerun()
+            else:
+                st.error("Please enter an email to login")
+                
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
         st.stop()
