@@ -258,7 +258,7 @@ with tabs:
     st.header("Career Suggestions")
     render_career_suggestions(sections["career"].strip())
 
-with tabs:[1]
+with tabs:
     st.header("Roadmap")
     render_graphviz_roadmap(sections["roadmap"])
 
