@@ -7,207 +7,205 @@ import os
 from dotenv import load_dotenv
 
 # Load Gemini API Key and initialize Firebase
-
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
 firebase_creds_str = st.secrets["FIREBASE_SERVICE_ACCOUNT"]
 firebase_creds_dict = json.loads(firebase_creds_str)
 
 if not firebase_admin._apps:
-cred = credentials.Certificate(firebase_creds_dict)
-firebase_admin.initialize_app(cred)
+    cred = credentials.Certificate(firebase_creds_dict)
+    firebase_admin.initialize_app(cred)
 db = firestore.client()
 
 def sidebar_login():
-st.sidebar.header("User Login")
-if "user_email" not in st.session_state:
-st.session_state.user_email = ""
-email = st.sidebar.text_input("Enter your email", value=st.session_state.user_email)
-login_button = st.sidebar.button("Login")
-logout_button = st.sidebar.button("Logout")
-if login_button and email:
-st.session_state.user_email = email
-st.sidebar.success(f"Logged in as {email}")
-if logout_button:
-st.session_state.user_email = ""
+    st.sidebar.header("User Login")
+    if "user_email" not in st.session_state:
+        st.session_state.user_email = ""
+    email = st.sidebar.text_input("Enter your email", value=st.session_state.user_email)
+    login_button = st.sidebar.button("Login")
+    logout_button = st.sidebar.button("Logout")
+
+    if login_button and email:
+        st.session_state.user_email = email
+        st.sidebar.success(f"Logged in as {email}")
+    if logout_button:
+        st.session_state.user_email = ""
 
 sidebar_login()
 
 if not st.session_state.user_email:
-[st.info](http://st.info/)("Please login using the sidebar to continue.")
-st.stop()
+    st.info("Please login using the sidebar to continue.")
+    st.stop()
 
 user_id = st.session_state.user_email
 
 st.markdown("""
 <style>
 [data-testid="stSidebar"] {
-background-color: #f3e5f5;
-color: #37474f;
-padding: 24px 20px 40px 20px !important;
-font-weight: 600;
-min-width: 320px !important;
-border: none !important;
+    background-color: #f3e5f5;
+    color: #37474f;
+    padding: 24px 20px 40px 20px !important;
+    font-weight: 600;
+    min-width: 320px !important;
+    border: none !important;
 }
 .block-container {
-background-color: #f9fdfa;
-padding: 32px 48px 48px 48px !important;
-max-width: 900px;
-margin: auto;
-font-size: 1.1rem;
-color: #37474f;
+    background-color: #f9fdfa;
+    padding: 32px 48px 48px 48px !important;
+    max-width: 900px;
+    margin: auto;
+    font-size: 1.1rem;
+    color: #37474f;
 }
 h2, h3 {
-color: #4db6ac;
-padding-bottom: 8px;
+    color: #4db6ac;
+    padding-bottom: 8px;
 }
 ul {
-padding-left: 1.5rem;
+    padding-left: 1.5rem;
 }
 li {
-margin-bottom: 12px;
+    margin-bottom: 12px;
 }
 </style>
 """, unsafe_allow_html=True)
 
 def get_ai_response(prompt):
-url = f"[https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}](https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=%7BGEMINI_API_KEY%7D)"
-headers = {"Content-Type": "application/json"}
-data = {
-"contents": [{"parts": [{"text": prompt}]}],
-"generationConfig": {
-"temperature": 0.7,
-"maxOutputTokens": 1600,
-"topP": 1,
-"topK": 1
-}
-}
-response = requests.post(url, headers=headers, json=data)
-if response.status_code == 200:
-resp = response.json()
-try:
-return resp["candidates"][0]["content"]["parts"][0]["text"]
-except Exception as e:
-return f"Could not parse AI response: {e}"
-else:
-return f"API error: {response.status_code}"
+    url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
+    headers = {"Content-Type": "application/json"}
+    data = {
+        "contents": [{"parts": [{"text": prompt}]}],
+        "generationConfig": {
+            "temperature": 0.7,
+            "maxOutputTokens": 1600,
+            "topP": 1,
+            "topK": 1
+        }
+    }
+    response = requests.post(url, headers=headers, json=data)
+    if response.status_code == 200:
+        resp = response.json()
+        try:
+            return resp["candidates"][0]["content"]["parts"][0]["text"]
+        except Exception as e:
+            return f"Could not parse AI response: {e}"
+    else:
+        return f"API error: {response.status_code}"
 
 def split_sections(text):
-sections = {"career": "", "roadmap": "", "skill_gap": "", "learning": "", "practice_websites": ""}
-current = None
-for line in text.splitlines():
-if line.strip() == "===Career Suggestions===":
-current = "career"
-elif line.strip() == "===Roadmap===":
-current = "roadmap"
-elif line.strip() == "===Skill Gap Analysis & Practice Plan===":
-current = "skill_gap"
-elif line.strip() == "===Learning Resources===":
-current = "learning"
-elif line.strip() == "===Practice Websites===":
-current = "practice_websites"
-elif current is not None:
-sections[current] += line + "\n"
-return sections
+    sections = {"career": "", "roadmap": "", "skill_gap": "", "learning": "", "practice_websites": ""}
+    current = None
+    for line in text.splitlines():
+        if line.strip() == "===Career Suggestions===":
+            current = "career"
+        elif line.strip() == "===Roadmap===":
+            current = "roadmap"
+        elif line.strip() == "===Skill Gap Analysis & Practice Plan===":
+            current = "skill_gap"
+        elif line.strip() == "===Learning Resources===":
+            current = "learning"
+        elif line.strip() == "===Practice Websites===":
+            current = "practice_websites"
+        elif current is not None:
+            sections[current] += line + "\n"
+    return sections
 
 def extract_json_block(text):
-text = text.strip()
-start_token = "json"
-end_token = ""
-if text.startswith(start_token):
-text = text[len(start_token):].strip()
-if text.endswith(end_token):
-text = text[:-len(end_token)].strip()
-return text
+    text = text.strip()
+    start_token = "json"
+    end_token = ""
+    if text.startswith(start_token):
+        text = text[len(start_token):].strip()
+    if text.endswith(end_token):
+        text = text[:-len(end_token)].strip()
+    return text
 
 def render_graphviz_roadmap(roadmap_json):
-roadmap_json = extract_json_block(roadmap_json)
-if not roadmap_json:
-[st.info](http://st.info/)("No roadmap data available yet.")
-return
-try:
-data = json.loads(roadmap_json)
-if not data:
-[st.info](http://st.info/)("Roadmap JSON is empty.")
-return
-from graphviz import Digraph
-dot = Digraph(node_attr={'style': 'filled', 'fillcolor': '#ade8f4', 'fontname': 'Segoe UI'})
-dot.attr(rankdir='LR', size='8,5')
-for step in data:
-num = str(step.get("step_number", "?"))
-label = f"{step.get('title', '')}\n({step.get('expected_duration_weeks', '?')} weeks)"
-dot.node(num, label)
-for i in range(len(data)-1):
-dot.edge(str(data[i].get("step_number", "?")), str(data[i+1].get("step_number", "?")))
-st.graphviz_chart(dot)
-except Exception as e:
-st.error(f"Could not draw roadmap: {e}")
-st.text_area("Raw roadmap data (please verify format):", roadmap_json, height=200)
+    roadmap_json = extract_json_block(roadmap_json)
+    if not roadmap_json:
+        st.info("No roadmap data available yet.")
+        return
+    try:
+        data = json.loads(roadmap_json)
+        if not data:
+            st.info("Roadmap JSON is empty.")
+            return
+        from graphviz import Digraph
+        dot = Digraph(node_attr={'style': 'filled', 'fillcolor': '#ade8f4', 'fontname': 'Segoe UI'})
+        dot.attr(rankdir='LR', size='8,5')
+        for step in data:
+            num = str(step.get("step_number", "?"))
+            label = f"{step.get('title', '')}\n({step.get('expected_duration_weeks', '?')} weeks)"
+            dot.node(num, label)
+        for i in range(len(data)-1):
+            dot.edge(str(data[i].get("step_number", "?")), str(data[i+1].get("step_number", "?")))
+        st.graphviz_chart(dot)
+    except Exception as e:
+        st.error(f"Could not draw roadmap: {e}")
+        st.text_area("Raw roadmap data (please verify format):", roadmap_json, height=200)
 
 def get_checklist_items(practice_text):
-return [line[2:].strip() for line in practice_text.split('\n') if line.strip().startswith("- ")]
+    return [line[2:].strip() for line in practice_text.split('\n') if line.strip().startswith("- ")]
 
 def checklist_with_persistence(items):
-# Display checkboxes with unique keys so Streamlit manages state automatically
-for i, item in enumerate(items):
-key = f"practice_{i}"
-st.checkbox(item, key=key)
+    for i, item in enumerate(items):
+        key = f"practice_{i}"
+        st.checkbox(item, key=key)
 
 def render_learning_resources(text):
-lines = text.strip().split("\n")
-md_lines = []
-for line in lines:
-line = line.strip()
-if line:
-if line.startswith("- ") or line.startswith("* "):
-md_lines.append(line)
-else:
-md_lines.append(f"- {line}")
-st.markdown("\n".join(md_lines))
+    lines = text.strip().split("\n")
+    md_lines = []
+    for line in lines:
+        line = line.strip()
+        if line:
+            if line.startswith("- ") or line.startswith("* "):
+                md_lines.append(line)
+            else:
+                md_lines.append(f"- {line}")
+    st.markdown("\n".join(md_lines))
 
 def render_career_suggestions(text):
-# Remove any secondary bullets and make one-level list
-lines = [line.lstrip("-* \t").strip() for line in text.splitlines() if line.strip()]
-st.markdown("\n".join(f"- {line}" for line in lines))
+    # Remove any secondary bullets and make one-level list
+    lines = [line.lstrip("-* \t").strip() for line in text.splitlines() if line.strip()]
+    st.markdown("\n".join(f"- {line}" for line in lines))
+
 def generate_linkedin_job_url(keywords, location):
-base_url = "https://www.linkedin.com/jobs/search/"
-query = f"?keywords={keywords.replace(' ', '%20')}&location={location.replace(' ', '%20')}"
-return base_url + query
+    base_url = "https://www.linkedin.com/jobs/search/"
+    query = f"?keywords={keywords.replace(' ', '%20')}&location={location.replace(' ', '%20')}"
+    return base_url + query
 
 def get_job_platform_links(keywords, location):
-return {
-"LinkedIn Jobs": generate_linkedin_job_url(keywords, location),
-"Unstop Jobs": f"https://unstop.com/jobs?search={keywords.replace(' ', '%20')}&location={location.replace(' ', '%20')}",
-"Hiring Cloud": f"https://hiringcloud.in/jobs?query={keywords.replace(' ', '%20')}"
-}
+    return {
+        "LinkedIn Jobs": generate_linkedin_job_url(keywords, location),
+        "Unstop Jobs": f"https://unstop.com/jobs?search={keywords.replace(' ', '%20')}&location={location.replace(' ', '%20')}",
+        "Hiring Cloud": f"https://hiringcloud.in/jobs?query={keywords.replace(' ', '%20')}"
+    }
 
 st.header("AI-Powered Career Advisor with Referrals")
 
 with st.sidebar:
-st.header("Profile Information")
-age = st.number_input("Age", 10, 60)
-location = st.text_input("City or State")
-education = st.text_input("Education Background")
+    st.header("Profile Information")
+    age = st.number_input("Age", 10, 60)
+    location = st.text_input("City or State")
+    education = st.text_input("Education Background")
 
-```
-st.write("Enter skills and your proficiency (1-5):")
-skills = {}
-for i in range(3):
-    skill = st.text_input(f"Skill {i+1}", key=f"skill{i}")
-    level = st.slider(f"Proficiency Level {i+1}", 1, 5, 3, key=f"level{i}")
-    if skill:
-        skills[skill] = level
-skills_text = ", ".join([f"{s} (level {l})" for s, l in skills.items()])
+    st.write("Enter skills and your proficiency (1-5):")
+    skills = {}
+    for i in range(3):
+        skill = st.text_input(f"Skill {i+1}", key=f"skill{i}")
+        level = st.slider(f"Proficiency Level {i+1}", 1, 5, 3, key=f"level{i}")
+        if skill:
+            skills[skill] = level
+    skills_text = ", ".join([f"{s} (level {l})" for s, l in skills.items()])
 
-interests = st.text_input("Interests (comma-separated)")
-goals = st.text_input("Career Goals")
+    interests = st.text_input("Interests (comma-separated)")
+    goals = st.text_input("Career Goals")
 
-submit = st.button("Get Career Advice")
-```
+    submit = st.button("Get Career Advice")
 
 if not submit:
-[st.info](http://st.info/)("Fill profile and click 'Get Career Advice' to generate suggestions.")
-st.stop()
+    st.info("Fill profile and click 'Get Career Advice' to generate suggestions.")
+    st.stop()
 
 prompt = f"""
 I am a {age}-year-old student from {location}, India.
@@ -220,20 +218,19 @@ Please provide the output in the following exact sections:
 
 ===Career Suggestions===
 Provide exactly 3 career suggestions, each as a bullet point like:
-
 - Career Name: brief explanation.
 
 ===Roadmap===
 Provide ONLY a valid JSON array (no extra text) for the roadmap steps as below:
 
 [
-{{
-"step_number": 1,
-"title": "Step title",
-"description": "Step description",
-"expected_duration_weeks": 4
-}},
-...
+  {{
+    "step_number": 1,
+    "title": "Step title",
+    "description": "Step description",
+    "expected_duration_weeks": 4
+  }},
+  ...
 ]
 
 ===Skill Gap Analysis & Practice Plan===
@@ -243,7 +240,7 @@ List skills to develop and provide a bullet point practice plan.
 List relevant courses, books, or tutorials as bullet points.
 
 ===Practice Websites===
-List practice websites with markdown links like [site](https://www.notion.so/url).
+List practice websites with markdown links like [site](https://www.example.com).
 
 No extra text outside these sections.
 """
@@ -254,41 +251,40 @@ sections = split_sections(ai_response)
 tabs = st.tabs(["Career Suggestions", "Roadmap", "Skill Gap Analysis", "Learning Resources", "Practice Websites", "Job Search Platforms"])
 
 with tabs[0]:
-st.header("Career Suggestions")
-render_career_suggestions(sections["career"].strip())
+    st.header("Career Suggestions")
+    render_career_suggestions(sections["career"].strip())
 
 with tabs[1]:
-st.header("Roadmap")
-render_graphviz_roadmap(sections["roadmap"])
+    st.header("Roadmap")
+    render_graphviz_roadmap(sections["roadmap"])
 
 with tabs[2]:
-st.header("Skill Gap Analysis & Practice Plan")
-checklist_items = get_checklist_items(sections["skill_gap"])
-if checklist_items:
-st.write("Practice Plan Checklist:")
-checklist_with_persistence(checklist_items)
-# Optionally add extra instructions or options below checklist
-extra_options = sections["skill_gap"].split("\n")
-# Remove checklist items lines to isolate extras
-extras = [line for line in extra_options if not line.strip().startswith("- ")]
-if extras:
-st.markdown("\n".join(extras))
-else:
-st.markdown(sections["skill_gap"].strip())
+    st.header("Skill Gap Analysis & Practice Plan")
+    checklist_items = get_checklist_items(sections["skill_gap"])
+    if checklist_items:
+        st.write("Practice Plan Checklist:")
+        checklist_with_persistence(checklist_items)
+        # Optionally add extra instructions or options below checklist
+        extra_options = sections["skill_gap"].split("\n")
+        extras = [line for line in extra_options if not line.strip().startswith("- ")]
+        if extras:
+            st.markdown("\n".join(extras))
+    else:
+        st.markdown(sections["skill_gap"].strip())
 
 with tabs[3]:
-st.header("Learning Resources")
-if sections["learning"].strip():
-render_learning_resources(sections["learning"])
-else:
-[st.info](http://st.info/)("No learning resources found.")
+    st.header("Learning Resources")
+    if sections["learning"].strip():
+        render_learning_resources(sections["learning"])
+    else:
+        st.info("No learning resources found.")
 
 with tabs[4]:
-st.header("Practice Websites")
-st.markdown(sections["practice_websites"], unsafe_allow_html=True)
+    st.header("Practice Websites")
+    st.markdown(sections["practice_websites"], unsafe_allow_html=True)
 
 with tabs[5]:
-st.header("Job Search Platforms")
-job_links = get_job_platform_links(skills_text, location)
-for platform, url in job_links.items():
-st.markdown(f"- [{platform}](https://www.notion.so/%7Burl%7D)", unsafe_allow_html=True)
+    st.header("Job Search Platforms")
+    job_links = get_job_platform_links(skills_text, location)
+    for platform, url in job_links.items():
+        st.markdown(f"- [{platform}]({url})", unsafe_allow_html=True)
