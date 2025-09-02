@@ -257,7 +257,7 @@ with tabs[1]:
     st.header("Roadmap")
     render_graphviz_roadmap(sections["roadmap"])
 
-ith tabs[2]:
+with tabs[2]:
     st.header("Skill Gap Analysis & Practice Plan")
     checklist_items = get_checklist_items(sections["skill_gap"])
     if checklist_items:
