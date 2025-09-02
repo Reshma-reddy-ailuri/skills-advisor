@@ -296,23 +296,23 @@ def load_progress(user_id):
     return {}
 
 def simple_login():
-    # Custom centered login UI when user not logged in
+    # Safely wrap rerun with button callback
     if "user_email" not in st.session_state:
         st.session_state.user_email = None
 
-    if not st.session_state.user_email:
+    if st.session_state.user_email is None:
         st.markdown('<div id="login-container">', unsafe_allow_html=True)
         st.markdown('<div id="login-box">', unsafe_allow_html=True)
         st.markdown('<h2>Welcome! Please Login</h2>', unsafe_allow_html=True)
 
         email = st.text_input("Enter your email", key="login_email")
+        login_button = st.button("Login")
 
-        if st.button("Login"):
-            if email:
-                st.session_state.user_email = email
-                st.experimental_rerun()  # reload app with login state
-            else:
-                st.error("Please enter an email to login")
+        if login_button and email:
+            st.session_state.user_email = email
+            st.experimental_rerun()
+        elif login_button and not email:
+            st.error("Please enter an email to login")
 
         st.markdown('</div>', unsafe_allow_html=True)
         st.markdown('</div>', unsafe_allow_html=True)
@@ -326,7 +326,7 @@ def simple_login():
 
 simple_login()
 
-user_id = st.session_state.user_email  # use email as user_id for demo
+user_id = st.session_state.user_email  # as user_id for demo
 
 st.set_page_config(page_title="AI Career Advisor with Firestore", layout="wide")
 st.title("AI-Powered Career Advisor with Firestore Persistence")
