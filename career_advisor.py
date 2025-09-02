@@ -6,56 +6,83 @@ import requests
 import os
 from dotenv import load_dotenv
 
-# Soothing color palette with soft pastels and comfortable contrasts
+# Soothing pastel color palette and layout CSS
 st.markdown("""
 <style>
-/* Background with soft pastel gradient */
-.reportview-container {
+/* Full viewport height for login container */
+#login-container {
+    height: 100vh;
+    display: flex;
+    justify-content: center;
+    align-items: center;
     background: linear-gradient(135deg, #e3f2fd 0%, #fce4ec 100%);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Primary heading with soft teal */
-h1 {
-    color: #4db6ac; /* soft teal */
-    font-weight: 700;
-    font-size: 2.8rem;
+/* Login box styling */
+#login-box {
+    background: white;
+    padding: 40px 50px;
+    border-radius: 18px;
+    box-shadow: 0 6px 20px rgba(77, 182, 172, 0.3);
+    width: 360px;
     text-align: center;
-    margin-bottom: 1rem;
-    text-shadow: 1px 1px 3px rgba(77, 182, 172, 0.4);
 }
 
-/* Sidebar with calming lavender background and gentle border */
+/* Login headers */
+#login-box h2 {
+    color: #4db6ac;
+    margin-bottom: 24px;
+    font-weight: 700;
+}
+
+/* Sidebar styling after login */
 [data-testid="stSidebar"] {
     background: #ede7f6; /* lavender */
     color: #37474f; /* blue gray */
     border-right: 3px solid #80cbc4; /* soft teal */
     padding: 20px 25px 50px 25px !important;
     font-weight: 600;
+    min-width: 320px !important;
 }
 
-/* Sidebar headers with deeper teal */
+/* Sidebar headers and text */
 [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
     color: #00796b; /* dark teal */
     margin-top: 1rem;
     margin-bottom: 0.6rem;
 }
 
-/* Sidebar input fields with soft shadows and rounded corners */
+/* Inputs in sidebar: subtle borders and focus */
 [data-testid="stSidebar"] input,
 [data-testid="stSidebar"] textarea,
 [data-testid="stSidebar"] select {
-    border-radius: 12px;
-    border: 1.8px solid #80cbc4; /* soft teal border */
-    padding: 10px 16px;
-    margin-bottom: 16px;
-    font-size: 1rem;
-    box-shadow: 2px 2px 6px rgba(128, 203, 196, 0.25);
-    color: #37474f;
-    background-color: #ffffff;
+    border-radius: 10px !important;
+    border: 1.5px solid #b2dfdb !important;   /* very soft teal border */
+    background-color: #ffffff !important;
+    box-shadow: none !important;
+    padding: 10px 14px !important;
+    margin-bottom: 16px !important;
+    font-size: 15px !important;
+    color: #37474f !important;
+    outline: none !important;
+    transition: border-color 0.2s ease;
+}
+[data-testid="stSidebar"] input:focus,
+[data-testid="stSidebar"] textarea:focus,
+[data-testid="stSidebar"] select:focus {
+    border-color: #4db6ac !important;
 }
 
-/* Buttons with soft teal background and smooth hover */
+/* Sliders - gentle accent */
+[data-baseweb="slider"] .css-14a99sa {
+    background: #b2dfdb !important;   /* muted teal track */
+}
+[data-baseweb="slider"] .css-1siy2j7 {
+    background: #4db6ac !important;   /* soft teal active */
+}
+
+/* Buttons */
 .stButton>button {
     background-color: #4db6ac; /* soft teal */
     color: white !important;
@@ -71,15 +98,30 @@ h1 {
     box-shadow: 0 7px 20px rgba(128, 203, 196, 0.6);
 }
 
-/* Tabs background with soft pastel */
+/* Main content padding, max width and center */
+.css-1d391kg {
+    max-width: 900px !important;
+    margin: 0 auto !important;
+    padding: 32px 24px !important;
+}
+
+/* Tab panels styled with border and background */
+[role="tabpanel"] {
+    border: 1.5px solid #b2dfdb;
+    border-radius: 14px;
+    padding: 20px;
+    background-color: #f9fdfa;
+    box-shadow: 0 2px 8px rgba(128, 203, 219, 0.2);
+    margin-bottom: 30px;
+}
+
+/* Tabs container and tabs styling */
 [role="tablist"] {
     background-color: #f3e5f5; /* lavender light */
     border-radius: 16px;
     padding: 8px 20px;
     margin-bottom: 20px;
 }
-
-/* Tabs labels soft teal with rounded corners */
 [role="tab"] {
     color: #4db6ac; /* soft teal */
     font-weight: 600;
@@ -90,8 +132,6 @@ h1 {
     text-align: center;
     transition: all 0.3s ease;
 }
-
-/* Selected tab styling */
 [role="tab"][aria-selected="true"] {
     background: #4db6ac;
     color: #fff !important;
@@ -99,7 +139,7 @@ h1 {
     box-shadow: 0 6px 20px rgba(77, 182, 172, 0.45);
 }
 
-/* Text areas with soft background and smooth shadow */
+/* Textareas */
 textarea {
     background-color: #f1fafe; /* very light blue */
     color: #37474f;
@@ -113,12 +153,7 @@ textarea {
     box-shadow: inset 0 0 10px rgba(128, 203, 196, 0.2);
 }
 
-/* Main content padding */
-.css-1d391kg {
-    padding: 32px !important;
-}
-
-/* Scrollbar styling for textareas */
+/* Scrollbar for textareas */
 textarea::-webkit-scrollbar {
     width: 12px;
 }
@@ -132,12 +167,11 @@ textarea::-webkit-scrollbar-thumb {
     border: 3px solid #ede7f6;
 }
 
-/* Practice checklist text */
+/* Practice checklist label color */
 .css-1r6slb0 span {
     color: #00796b; /* darker teal */
     font-weight: 700;
 }
-
 </style>
 """, unsafe_allow_html=True)
 
@@ -152,7 +186,6 @@ firebase_creds_dict = json.loads(firebase_creds_str)
 if not firebase_admin._apps:
     cred = credentials.Certificate(firebase_creds_dict)
     firebase_admin.initialize_app(cred)
-
 db = firestore.client()
 
 def get_ai_response(prompt):
@@ -242,9 +275,7 @@ def display_practice_checklist(practice_text):
         st.write("No checklist items found; showing full practice plan below:")
         st.text_area("Practice Plan", practice_text, height=250)
         return
-
     init_checklist_states(len(checklist_items))
-
     for idx, item in enumerate(checklist_items):
         key = f"practice_{idx}"
         checked = st.checkbox(item, value=st.session_state.practice_states[key], key=key)
@@ -264,33 +295,39 @@ def load_progress(user_id):
         return data.get("practice_progress", {})
     return {}
 
-# Simple login simulation for demo (replace with real login later)
 def simple_login():
-    st.sidebar.header("User Authentication")
-    email = st.sidebar.text_input("Email")
+    # Custom centered login UI when user not logged in
     if "user_email" not in st.session_state:
         st.session_state.user_email = None
-    if st.sidebar.button("Login"):
-        if email:
-            st.session_state.user_email = email
-            st.success(f"Logged in as {email}")
-        else:
-            st.error("Enter an email to login.")
-    if st.session_state.user_email:
-        st.sidebar.write(f"Logged in: {st.session_state.user_email}")
+
+    if not st.session_state.user_email:
+        st.markdown('<div id="login-container">', unsafe_allow_html=True)
+        st.markdown('<div id="login-box">', unsafe_allow_html=True)
+        st.markdown('<h2>Welcome! Please Login</h2>', unsafe_allow_html=True)
+
+        email = st.text_input("Enter your email", key="login_email")
+
+        if st.button("Login"):
+            if email:
+                st.session_state.user_email = email
+                st.experimental_rerun()  # reload app with login state
+            else:
+                st.error("Please enter an email to login")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.stop()
+    else:
+        st.sidebar.header("User Authentication")
+        st.sidebar.write(f"Logged in as {st.session_state.user_email}")
         if st.sidebar.button("Logout"):
             st.session_state.user_email = None
             st.experimental_rerun()
 
 simple_login()
 
-if not st.session_state.get("user_email"):
-    st.warning("Please login from the sidebar to continue.")
-    st.stop()
-
 user_id = st.session_state.user_email  # use email as user_id for demo
 
-# Main app UI
 st.set_page_config(page_title="AI Career Advisor with Firestore", layout="wide")
 st.title("AI-Powered Career Advisor with Firestore Persistence")
 
