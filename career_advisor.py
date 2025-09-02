@@ -164,15 +164,9 @@ def render_learning_resources(text):
     st.markdown("\n".join(md_lines))
 
 def render_career_suggestions(text):
-    lines = [line.strip() for line in text.split('\n') if line.strip()]
-    if len(lines) == 1:
-        # Likely one paragraph, split by ". "
-        parts = lines.split(". ")
-        bullets = [p.strip() for p in parts if p.strip()]
-        st.markdown("\n".join(f"- {b}" for b in bullets))
-    else:
-        st.markdown("\n".join(f"- {line}" for line in lines))
-
+    # Remove any secondary bullets and make one-level list
+    lines = [line.lstrip("-* \t").strip() for line in text.splitlines() if line.strip()]
+    st.markdown("\n".join(f"- {line}" for line in lines))
 def generate_linkedin_job_url(keywords, location):
     base_url = "https://www.linkedin.com/jobs/search/"
     query = f"?keywords={keywords.replace(' ', '%20')}&location={location.replace(' ', '%20')}"
