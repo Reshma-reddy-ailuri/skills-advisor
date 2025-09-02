@@ -6,6 +6,8 @@ import requests
 import os
 from dotenv import load_dotenv
 
+st.write("Checkpoint 1: After imports and setup")
+
 # Load Gemini API Key from environment variable or Streamlit secrets
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
@@ -20,6 +22,7 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 def simple_login():
+    st.write("Checkpoint 2: Inside simple_login() start")
     if "user_email" not in st.session_state:
         st.session_state.user_email = None
 
@@ -45,7 +48,6 @@ def simple_login():
         st.markdown('</div>', unsafe_allow_html=True)
         st.stop()
 
-    # Sidebar and logout button after login
     else:
         st.sidebar.header("User Authentication")
         st.sidebar.write(f"Logged in as {st.session_state.user_email}")
@@ -54,6 +56,7 @@ def simple_login():
             st.experimental_rerun()
 
 simple_login()
+st.write("Checkpoint 3: After simple_login()")
 
 # Soothing pastel color palette CSS after login
 st.markdown("""
@@ -187,6 +190,7 @@ textarea::-webkit-scrollbar-thumb {
 """, unsafe_allow_html=True)
 
 def get_ai_response(prompt):
+    st.write("Checkpoint 4: Inside get_ai_response()")
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     headers = {"Content-Type": "application/json"}
     data = {
@@ -199,13 +203,16 @@ def get_ai_response(prompt):
         }
     }
     response = requests.post(url, headers=headers, json=data)
+    st.write(f"Checkpoint 5: API responded with code {response.status_code}")
     if response.status_code == 200:
         resp = response.json()
         try:
             return resp["candidates"][0]["content"]["parts"][0]["text"]
         except Exception as e:
+            st.error(f"Error parsing AI response: {e}")
             return f"Error parsing AI response: {e}\nFull response: {resp}"
     else:
+        st.error(f"API Error: {response.status_code} - {response.text}")
         return f"API Error: {response.status_code} - {response.text}"
 
 def split_sections(text):
