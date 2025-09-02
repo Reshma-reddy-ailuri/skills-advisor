@@ -40,11 +40,11 @@ if not st.session_state.user_email:
 
 user_id = st.session_state.user_email
 
-# CSS pastel palette with padding, no borders for content
+# CSS pastel palette with padding, no borders on content areas
 st.markdown("""
 <style>
 [data-testid="stSidebar"] {
-    background-color: #f3e5f5; /* soft lavender */
+    background-color: #f3e5f5;
     color: #37474f;
     padding: 24px 20px 40px 20px !important;
     font-weight: 600;
@@ -53,7 +53,7 @@ st.markdown("""
 }
 
 .block-container {
-    background-color: #f9fdfa; /* soft mint */
+    background-color: #f9fdfa;
     padding: 32px 48px 48px 48px !important;
     max-width: 900px;
     margin: auto;
@@ -116,7 +116,16 @@ def split_sections(text):
             sections[current] += line + "\n"
     return sections
 
+def extract_json_block(text):
+    text = text.strip()
+    if text.startswith("```
+        text = text[len("```json"):].strip()
+    if text.endswith("```
+        text = text[:-3].strip()
+    return text
+
 def render_graphviz_roadmap(roadmap_json):
+    roadmap_json = extract_json_block(roadmap_json)
     if not roadmap_json.strip():
         st.info("No roadmap data available yet.")
         return
@@ -139,16 +148,24 @@ def render_graphviz_roadmap(roadmap_json):
 def get_checklist_items(practice_text):
     return [line[2:].strip() for line in practice_text.split('\n') if line.strip().startswith("- ")]
 
+def checklist_with_persistence(items):
+    for i, item in enumerate(items):
+        key = f"practice_{i}"
+        if key not in st.session_state:
+            st.session_state[key] = False
+        current = st.checkbox(item, value=st.session_state[key], key=key)
+        st.session_state[key] = current
+
 def render_learning_resources(text):
     lines = text.strip().split("\n")
     md_lines = []
     for line in lines:
         line = line.strip()
         if line:
-            if not line.startswith("- "):
-                md_lines.append(f"- {line}")
-            else:
+            if line.startswith("- ") or line.startswith("* "):
                 md_lines.append(line)
+            else:
+                md_lines.append(f"- {line}")
     st.markdown("\n".join(md_lines))
 
 def generate_linkedin_job_url(keywords, location):
@@ -231,36 +248,35 @@ sections = split_sections(ai_response)
 
 tabs = st.tabs(["Career Suggestions", "Roadmap", "Skill Gap Analysis", "Learning Resources", "Practice Websites", "Job Search Platforms"])
 
-with tabs[0]:
+with tabs:
     st.header("Career Suggestions")
     st.markdown(sections["career"].strip())
 
-with tabs[1]:
+with tabs:[1]
     st.header("Roadmap")
-    render_graphviz_roadmap(sections["roadmap"].strip())
+    render_graphviz_roadmap(sections["roadmap"])
 
-with tabs[2]:
+with tabs:[2]
     st.header("Skill Gap Analysis & Practice Plan")
     checklist_items = get_checklist_items(sections["skill_gap"])
     if checklist_items:
         st.write("Practice Plan Checklist:")
-        for i, item in enumerate(checklist_items):
-            st.checkbox(item, key=f"practice_{i}")
+        checklist_with_persistence(checklist_items)
     else:
         st.markdown(sections["skill_gap"].strip())
 
-with tabs[3]:
+with tabs:[3]
     st.header("Learning Resources")
     if sections["learning"].strip():
         render_learning_resources(sections["learning"])
     else:
         st.info("No learning resources found.")
 
-with tabs[4]:
+with tabs:[4]
     st.header("Practice Websites")
     st.markdown(sections["practice_websites"], unsafe_allow_html=True)
 
-with tabs[5]:
+with tabs:[5]
     st.header("Job Search Platforms")
     job_links = get_job_platform_links(skills_text, location)
     for platform, url in job_links.items():
