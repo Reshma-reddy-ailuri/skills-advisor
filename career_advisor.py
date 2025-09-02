@@ -22,10 +22,11 @@ if not firebase_admin._apps:
 db = firestore.client()
 
 def simple_login():
-    st.write("Checkpoint 2: Inside simple_login() start")
+    st.write("Checkpoint 2a: Inside simple_login() start")
     if "user_email" not in st.session_state:
         st.session_state.user_email = None
 
+    st.write("Checkpoint 2b: Before rendering login form")
     # Simple plain login screen without extra colors/styles
     if st.session_state.user_email is None:
         st.markdown('<style>body{background-color:#fff !important;}</style>', unsafe_allow_html=True)
@@ -37,8 +38,12 @@ def simple_login():
             email = st.text_input("Enter your email", key="login_email")
             login_clicked = st.form_submit_button("Login")
 
+        st.write("Checkpoint 2c: After login form rendered")
+
         if login_clicked:
+            st.write("Checkpoint 2d: Login button clicked")
             if email:
+                st.write(f"Checkpoint 2e: Login email entered: {email}")
                 st.session_state.user_email = email
                 st.experimental_rerun()
             else:
