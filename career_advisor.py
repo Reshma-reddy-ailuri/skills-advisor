@@ -250,7 +250,10 @@ with tabs[0]:
 
 with tabs[1]:
     st.header("Roadmap")
-    render_graphviz_roadmap(sections["roadmap"])
+    roadmap_json = extract_json_block(sections["roadmap"])
+    st.write("Raw roadmap JSON received from AI:")
+    st.text(roadmap_json)  # Show raw JSON for debugging
+    render_graphviz_roadmap(roadmap_json)
 
 with tabs[2]:
     st.header("Skill Gap Analysis & Practice Plan")
