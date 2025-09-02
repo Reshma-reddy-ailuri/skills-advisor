@@ -244,7 +244,7 @@ sections = split_sections(ai_response)
 
 tabs = st.tabs(["Career Suggestions", "Roadmap", "Skill Gap Analysis", "Learning Resources", "Practice Websites", "Job Search Platforms"])
 
-with tabs:
+with tabs[0]:
     st.header("Career Suggestions")
     st.markdown(sections["career"].strip())
 
