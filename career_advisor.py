@@ -30,7 +30,7 @@ def sidebar_login():
         st.sidebar.success(f"Logged in as {email}")
     if logout_button:
         st.session_state.user_email = ""
-        # Without experimental_rerun, page refresh is manual
+        # No experimental_rerun, manual refresh needed
 
 sidebar_login()
 
@@ -40,15 +40,56 @@ if not st.session_state.user_email:
 
 user_id = st.session_state.user_email
 
-# Styling for more spacing and web-like look
+# Place CSS palette immediately after login for styling
 st.markdown("""
-    <style>
-    .block-container {padding-top: 2rem !important;}
-    .stTabs { margin-bottom: 1.5rem !important;}
-    section[data-testid="stHorizontalBlock"] > div { padding: 1.2rem 2rem;}
-    h1, .stTabs [role="tab"] { font-size: 2rem; }
-    .stMarkdown { font-size: 1.1rem; }
-    </style>
+<style>
+[data-testid="stSidebar"] {
+    background: #ede7f6;
+    color: #37474f;
+    border-right: 3px solid #80cbc4;
+    padding: 20px 25px 50px 25px !important;
+    font-weight: 600;
+    min-width: 320px !important;
+}
+[data-testid="stSidebar"] input,
+[data-testid="stSidebar"] textarea,
+[data-testid="stSidebar"] select {
+    border-radius: 10px !important;
+    border: 1.5px solid #b2dfdb !important;
+    padding: 10px 14px !important;
+    margin-bottom: 16px !important;
+    font-size: 15px !important;
+    color: #37474f !important;
+}
+.stButton > button {
+    background-color: #4db6ac;
+    color: white !important;
+    border-radius: 14px;
+    padding: 14px 40px;
+    margin-top: 18px !important;
+}
+.css-1d391kg {
+    max-width: 900px !important;
+    margin: 0 auto !important;
+    padding: 32px 24px !important;
+}
+[role="tabpanel"] {
+    border: 1.5px solid #b2dfdb;
+    border-radius: 14px;
+    padding: 20px;
+    background-color: #f9fdfa;
+    margin-bottom: 30px;
+}
+textarea {
+    background-color: #f1fafe;
+    border-radius: 14px;
+    border: 1.5px solid #b2dfdb;
+    padding: 14px 20px;
+    min-height: 280px;
+    resize: vertical;
+    box-shadow: inset 0 0 10px rgba(128, 203, 196, 0.2);
+}
+</style>
 """, unsafe_allow_html=True)
 
 def get_ai_response(prompt):
@@ -68,8 +109,8 @@ def get_ai_response(prompt):
         resp = response.json()
         try:
             return resp["candidates"][0]["content"]["parts"][0]["text"]
-        except:
-            return "Could not parse AI response."
+        except Exception as e:
+            return f"Could not parse AI response: {e}"
     else:
         return f"API error: {response.status_code}"
 
@@ -87,24 +128,28 @@ def split_sections(text):
             current = "learning"
         elif line.strip() == "===Practice Websites===":
             current = "practice_websites"
-        elif current:
+        elif current is not None:
             sections[current] += line + "\n"
     return sections
 
 def render_graphviz_roadmap(roadmap_json):
+    if not roadmap_json.strip():
+        st.info("No roadmap data available yet.")
+        return
     try:
         data = json.loads(roadmap_json)
         from graphviz import Digraph
         dot = Digraph()
         for step in data:
-            num = str(step["step_number"])
-            label = f'''{step["title"]}\n({step["expected_duration_weeks"]} weeks)'''
+            num = str(step.get("step_number", "?"))
+            label = f"{step.get('title', '')}\n({step.get('expected_duration_weeks', '?')} weeks)"
             dot.node(num, label)
         for i in range(len(data)-1):
-            dot.edge(str(data[i]["step_number"]), str(data[i+1]["step_number"]))
+            dot.edge(str(data[i].get("step_number", "?")), str(data[i+1].get("step_number", "?")))
         st.graphviz_chart(dot)
     except Exception as e:
         st.error(f"Could not draw roadmap: {e}")
+        st.text_area("Raw roadmap data:", roadmap_json, height=200)
 
 def get_checklist_items(practice_text):
     return [line[2:].strip() for line in practice_text.split('\n') if line.strip().startswith("- ")]
