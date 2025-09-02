@@ -6,6 +6,138 @@ import requests
 import os
 from dotenv import load_dotenv
 
+# Expanded CSS for enhanced color palette and styling
+st.markdown("""
+<style>
+/* Main app background */
+.reportview-container {
+    background: linear-gradient(135deg, #f0f8ff 0%, #e6e6fa 100%);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Primary heading */
+h1 {
+    color: #4B0082; /* Indigo */
+    font-weight: 700;
+    font-size: 3rem;
+    margin-bottom: 1rem;
+    text-align: center;
+    text-shadow: 1px 1px 4px rgba(75, 0, 130, 0.5);
+}
+
+/* Sidebar styling */
+[data-testid="stSidebar"] {
+    background: #d8bfd8; /* Thistle */
+    color: #4b0082;
+    border-right: 3px solid #6a5acd;
+    padding-top: 20px;
+    font-weight: 600;
+}
+
+/* Sidebar headers */
+[data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
+    color: #4b0082;
+    margin-top: 1rem;
+    margin-bottom: 0.5rem;
+}
+
+/* Sidebar input fields */
+[data-testid="stSidebar"] input, 
+[data-testid="stSidebar"] textarea, 
+[data-testid="stSidebar"] select {
+    border-radius: 10px;
+    border: 1.5px solid #6a5acd;
+    padding: 8px 12px;
+    margin-bottom: 15px;
+    font-size: 1rem;
+}
+
+/* Buttons */
+.stButton>button {
+    background-color: #6a5acd; /* Slate Blue */
+    color: white !important;
+    border-radius: 12px;
+    font-weight: 700;
+    padding: 10px 30px;
+    margin-top: 10px;
+    transition: background-color 0.3s ease;
+    box-shadow: 0 4px 15px rgba(106, 90, 205, 0.4);
+}
+.stButton>button:hover {
+    background-color: #7b68ee; /* Medium Slate Blue */
+    box-shadow: 0 6px 20px rgba(123, 104, 238, 0.6);
+}
+
+/* Tabs background and selected tab */
+[role="tablist"] {
+    background-color: #e6e6fa; /* Lavender */
+    border-radius: 10px;
+    padding: 6px 12px;
+    margin-bottom: 15px;
+}
+
+[role="tab"] {
+    color: #6a5acd;
+    font-weight: 600;
+    border-radius: 8px;
+    padding: 8px 16px;
+    margin: 2px 6px;
+    transition: all 0.3s ease;
+    min-width: 150px;
+    text-align: center;
+}
+
+[role="tab"][aria-selected="true"] {
+    background-color: #6a5acd;
+    color: white !important;
+    font-weight: 700;
+    box-shadow: 0 4px 15px rgba(106, 90, 205, 0.5);
+}
+
+/* Practice Plan checklist labels */
+.css-1r6slb0 span {
+    color: #ff4500; /* OrangeRed */
+    font-weight: 600;
+}
+
+/* Text areas for suggestions and resources */
+textarea {
+    background-color: #fffaf0; /* Floral White */
+    color: #4b0082;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    font-size: 1rem;
+    border-radius: 12px;
+    border: 1.5px solid #6a5acd;
+    padding: 10px;
+}
+
+/* Graphviz chart container */
+.stGraphVizChart > div {
+    border-radius: 12px;
+    border: 2px solid #6a5acd;
+    box-shadow: 0 4px 15px rgba(106, 90, 205, 0.3);
+    background-color: #fafafa;
+}
+
+/* Custom scrollbar style for long text areas */
+textarea::-webkit-scrollbar {
+    width: 12px;
+}
+
+textarea::-webkit-scrollbar-track {
+    background: #e6e6fa;
+    border-radius: 12px;
+}
+
+textarea::-webkit-scrollbar-thumb {
+    background-color: #6a5acd;
+    border-radius: 12px;
+    border: 3px solid #e6e6fa;
+}
+
+</style>
+""", unsafe_allow_html=True)
+
 # Load Gemini API Key from environment variable or Streamlit secrets
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
