@@ -114,10 +114,12 @@ def split_sections(text):
 
 def extract_json_block(text):
     text = text.strip()
-    if text.startswith("```json"):
-        text = text[len("```
-    if text.endswith("```"):
-        text = text[:-3].strip()
+    start_token = "```
+    end_token = "```"
+    if text.startswith(start_token):
+        text = text[len(start_token):].strip()
+    if text.endswith(end_token):
+        text = text[:-len(end_token)].strip()
     return text
 
 def render_graphviz_roadmap(roadmap_json):
