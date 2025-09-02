@@ -118,9 +118,9 @@ def split_sections(text):
 
 def extract_json_block(text):
     text = text.strip()
-    if text.startswith("```
-        text = text[len("```json"):].strip()
-    if text.endswith("```
+    if text.startswith("```json"):
+        text = text[len("```
+    if text.endswith("```"):
         text = text[:-3].strip()
     return text
 
