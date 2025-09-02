@@ -147,6 +147,7 @@ def get_checklist_items(practice_text):
     return [line[2:].strip() for line in practice_text.split('\n') if line.strip().startswith("- ")]
 
 def checklist_with_persistence(items):
+    # Display checkboxes with unique keys so Streamlit manages state automatically
     for i, item in enumerate(items):
         key = f"practice_{i}"
         st.checkbox(item, key=key)
@@ -256,15 +257,20 @@ with tabs[1]:
     st.header("Roadmap")
     render_graphviz_roadmap(sections["roadmap"])
 
-with tabs[2]:
+ith tabs[2]:
     st.header("Skill Gap Analysis & Practice Plan")
     checklist_items = get_checklist_items(sections["skill_gap"])
     if checklist_items:
         st.write("Practice Plan Checklist:")
         checklist_with_persistence(checklist_items)
+        # Optionally add extra instructions or options below checklist
+        extra_options = sections["skill_gap"].split("\n")
+        # Remove checklist items lines to isolate extras
+        extras = [line for line in extra_options if not line.strip().startswith("- ")]
+        if extras:
+            st.markdown("\n".join(extras))
     else:
         st.markdown(sections["skill_gap"].strip())
-
 with tabs[3]:
     st.header("Learning Resources")
     if sections["learning"].strip():
