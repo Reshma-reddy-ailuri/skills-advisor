@@ -6,133 +6,136 @@ import requests
 import os
 from dotenv import load_dotenv
 
-# Expanded CSS for enhanced color palette and styling
+# Soothing color palette with soft pastels and comfortable contrasts
 st.markdown("""
 <style>
-/* Main app background */
+/* Background with soft pastel gradient */
 .reportview-container {
-    background: linear-gradient(135deg, #f0f8ff 0%, #e6e6fa 100%);
+    background: linear-gradient(135deg, #e3f2fd 0%, #fce4ec 100%);
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
-/* Primary heading */
+/* Primary heading with soft teal */
 h1 {
-    color: #4B0082; /* Indigo */
+    color: #4db6ac; /* soft teal */
     font-weight: 700;
-    font-size: 3rem;
-    margin-bottom: 1rem;
+    font-size: 2.8rem;
     text-align: center;
-    text-shadow: 1px 1px 4px rgba(75, 0, 130, 0.5);
+    margin-bottom: 1rem;
+    text-shadow: 1px 1px 3px rgba(77, 182, 172, 0.4);
 }
 
-/* Sidebar styling */
+/* Sidebar with calming lavender background and gentle border */
 [data-testid="stSidebar"] {
-    background: #d8bfd8; /* Thistle */
-    color: #4b0082;
-    border-right: 3px solid #6a5acd;
-    padding-top: 20px;
+    background: #ede7f6; /* lavender */
+    color: #37474f; /* blue gray */
+    border-right: 3px solid #80cbc4; /* soft teal */
+    padding: 20px 25px 50px 25px !important;
     font-weight: 600;
 }
 
-/* Sidebar headers */
+/* Sidebar headers with deeper teal */
 [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
-    color: #4b0082;
+    color: #00796b; /* dark teal */
     margin-top: 1rem;
-    margin-bottom: 0.5rem;
+    margin-bottom: 0.6rem;
 }
 
-/* Sidebar input fields */
-[data-testid="stSidebar"] input, 
-[data-testid="stSidebar"] textarea, 
+/* Sidebar input fields with soft shadows and rounded corners */
+[data-testid="stSidebar"] input,
+[data-testid="stSidebar"] textarea,
 [data-testid="stSidebar"] select {
-    border-radius: 10px;
-    border: 1.5px solid #6a5acd;
-    padding: 8px 12px;
-    margin-bottom: 15px;
+    border-radius: 12px;
+    border: 1.8px solid #80cbc4; /* soft teal border */
+    padding: 10px 16px;
+    margin-bottom: 16px;
     font-size: 1rem;
+    box-shadow: 2px 2px 6px rgba(128, 203, 196, 0.25);
+    color: #37474f;
+    background-color: #ffffff;
 }
 
-/* Buttons */
+/* Buttons with soft teal background and smooth hover */
 .stButton>button {
-    background-color: #6a5acd; /* Slate Blue */
+    background-color: #4db6ac; /* soft teal */
     color: white !important;
-    border-radius: 12px;
+    border-radius: 14px;
     font-weight: 700;
-    padding: 10px 30px;
-    margin-top: 10px;
-    transition: background-color 0.3s ease;
-    box-shadow: 0 4px 15px rgba(106, 90, 205, 0.4);
+    padding: 14px 40px;
+    margin-top: 18px !important;
+    box-shadow: 0 5px 15px rgba(77, 182, 172, 0.4);
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 .stButton>button:hover {
-    background-color: #7b68ee; /* Medium Slate Blue */
-    box-shadow: 0 6px 20px rgba(123, 104, 238, 0.6);
+    background-color: #80cbc4; /* lighter teal */
+    box-shadow: 0 7px 20px rgba(128, 203, 196, 0.6);
 }
 
-/* Tabs background and selected tab */
+/* Tabs background with soft pastel */
 [role="tablist"] {
-    background-color: #e6e6fa; /* Lavender */
-    border-radius: 10px;
-    padding: 6px 12px;
-    margin-bottom: 15px;
+    background-color: #f3e5f5; /* lavender light */
+    border-radius: 16px;
+    padding: 8px 20px;
+    margin-bottom: 20px;
 }
 
+/* Tabs labels soft teal with rounded corners */
 [role="tab"] {
-    color: #6a5acd;
+    color: #4db6ac; /* soft teal */
     font-weight: 600;
-    border-radius: 8px;
-    padding: 8px 16px;
-    margin: 2px 6px;
-    transition: all 0.3s ease;
-    min-width: 150px;
+    border-radius: 16px;
+    padding: 10px 26px;
+    margin: 4px 10px;
+    min-width: 160px;
     text-align: center;
+    transition: all 0.3s ease;
 }
 
+/* Selected tab styling */
 [role="tab"][aria-selected="true"] {
-    background-color: #6a5acd;
-    color: white !important;
+    background: #4db6ac;
+    color: #fff !important;
     font-weight: 700;
-    box-shadow: 0 4px 15px rgba(106, 90, 205, 0.5);
+    box-shadow: 0 6px 20px rgba(77, 182, 172, 0.45);
 }
 
-/* Practice Plan checklist labels */
-.css-1r6slb0 span {
-    color: #ff4500; /* OrangeRed */
-    font-weight: 600;
-}
-
-/* Text areas for suggestions and resources */
+/* Text areas with soft background and smooth shadow */
 textarea {
-    background-color: #fffaf0; /* Floral White */
-    color: #4b0082;
+    background-color: #f1fafe; /* very light blue */
+    color: #37474f;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 1rem;
-    border-radius: 12px;
-    border: 1.5px solid #6a5acd;
-    padding: 10px;
+    border-radius: 14px;
+    border: 1.5px solid #b2dfdb;
+    padding: 14px 20px;
+    min-height: 280px;
+    resize: vertical;
+    box-shadow: inset 0 0 10px rgba(128, 203, 196, 0.2);
 }
 
-/* Graphviz chart container */
-.stGraphVizChart > div {
-    border-radius: 12px;
-    border: 2px solid #6a5acd;
-    box-shadow: 0 4px 15px rgba(106, 90, 205, 0.3);
-    background-color: #fafafa;
+/* Main content padding */
+.css-1d391kg {
+    padding: 32px !important;
 }
 
-/* Custom scrollbar style for long text areas */
+/* Scrollbar styling for textareas */
 textarea::-webkit-scrollbar {
     width: 12px;
 }
-
 textarea::-webkit-scrollbar-track {
-    background: #e6e6fa;
+    background: #ede7f6;
     border-radius: 12px;
 }
-
 textarea::-webkit-scrollbar-thumb {
-    background-color: #6a5acd;
+    background-color: #4db6ac;
     border-radius: 12px;
-    border: 3px solid #e6e6fa;
+    border: 3px solid #ede7f6;
+}
+
+/* Practice checklist text */
+.css-1r6slb0 span {
+    color: #00796b; /* darker teal */
+    font-weight: 700;
 }
 
 </style>
