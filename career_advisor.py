@@ -6,37 +6,58 @@ import requests
 import os
 from dotenv import load_dotenv
 
-# Soothing pastel color palette and layout CSS
+# Load Gemini API Key from environment variable or Streamlit secrets
+load_dotenv()
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
+
+# Initialize Firebase Admin SDK using service account from Streamlit secrets
+firebase_creds_str = st.secrets["FIREBASE_SERVICE_ACCOUNT"]
+firebase_creds_dict = json.loads(firebase_creds_str)
+
+if not firebase_admin._apps:
+    cred = credentials.Certificate(firebase_creds_dict)
+    firebase_admin.initialize_app(cred)
+db = firestore.client()
+
+def simple_login():
+    if "user_email" not in st.session_state:
+        st.session_state.user_email = None
+
+    # Simple plain login screen without extra colors/styles
+    if st.session_state.user_email is None:
+        st.markdown('<style>body{background-color:#fff !important;}</style>', unsafe_allow_html=True)
+        st.markdown('<div style="height:100vh; display:flex; justify-content:center; align-items:center;">', unsafe_allow_html=True)
+        st.markdown('<div style="width:360px;">', unsafe_allow_html=True)
+        st.header("Welcome! Please Login")
+
+        with st.form(key="login_form"):
+            email = st.text_input("Enter your email", key="login_email")
+            login_clicked = st.form_submit_button("Login")
+
+        if login_clicked:
+            if email:
+                st.session_state.user_email = email
+                st.experimental_rerun()
+            else:
+                st.error("Please enter an email to login")
+
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.markdown('</div>', unsafe_allow_html=True)
+        st.stop()
+
+    # Sidebar and logout button after login
+    else:
+        st.sidebar.header("User Authentication")
+        st.sidebar.write(f"Logged in as {st.session_state.user_email}")
+        if st.sidebar.button("Logout"):
+            st.session_state.user_email = None
+            st.experimental_rerun()
+
+simple_login()
+
+# Inject soothing color palette CSS only after login
 st.markdown("""
 <style>
-/* Full viewport height for login container */
-#login-container {
-    height: 100vh;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    background: linear-gradient(135deg, #e3f2fd 0%, #fce4ec 100%);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-}
-
-/* Login box styling */
-#login-box {
-    background: white;
-    padding: 40px 50px;
-    border-radius: 18px;
-    box-shadow: 0 6px 20px rgba(77, 182, 172, 0.3);
-    width: 360px;
-    text-align: center;
-}
-
-/* Login headers */
-#login-box h2 {
-    color: #4db6ac;
-    margin-bottom: 24px;
-    font-weight: 700;
-}
-
-/* Sidebar styling after login */
 [data-testid="stSidebar"] {
     background: #ede7f6; /* lavender */
     color: #37474f; /* blue gray */
@@ -46,19 +67,17 @@ st.markdown("""
     min-width: 320px !important;
 }
 
-/* Sidebar headers and text */
 [data-testid="stSidebar"] h2, [data-testid="stSidebar"] h3 {
     color: #00796b; /* dark teal */
     margin-top: 1rem;
     margin-bottom: 0.6rem;
 }
 
-/* Inputs in sidebar: subtle borders and focus */
 [data-testid="stSidebar"] input,
 [data-testid="stSidebar"] textarea,
 [data-testid="stSidebar"] select {
     border-radius: 10px !important;
-    border: 1.5px solid #b2dfdb !important;   /* very soft teal border */
+    border: 1.5px solid #b2dfdb !important;
     background-color: #ffffff !important;
     box-shadow: none !important;
     padding: 10px 14px !important;
@@ -74,17 +93,15 @@ st.markdown("""
     border-color: #4db6ac !important;
 }
 
-/* Sliders - gentle accent */
 [data-baseweb="slider"] .css-14a99sa {
-    background: #b2dfdb !important;   /* muted teal track */
+    background: #b2dfdb !important;
 }
 [data-baseweb="slider"] .css-1siy2j7 {
-    background: #4db6ac !important;   /* soft teal active */
+    background: #4db6ac !important;
 }
 
-/* Buttons */
 .stButton>button {
-    background-color: #4db6ac; /* soft teal */
+    background-color: #4db6ac;
     color: white !important;
     border-radius: 14px;
     font-weight: 700;
@@ -94,18 +111,16 @@ st.markdown("""
     transition: background-color 0.3s ease, box-shadow 0.3s ease;
 }
 .stButton>button:hover {
-    background-color: #80cbc4; /* lighter teal */
+    background-color: #80cbc4;
     box-shadow: 0 7px 20px rgba(128, 203, 196, 0.6);
 }
 
-/* Main content padding, max width and center */
 .css-1d391kg {
     max-width: 900px !important;
     margin: 0 auto !important;
     padding: 32px 24px !important;
 }
 
-/* Tab panels styled with border and background */
 [role="tabpanel"] {
     border: 1.5px solid #b2dfdb;
     border-radius: 14px;
@@ -115,15 +130,14 @@ st.markdown("""
     margin-bottom: 30px;
 }
 
-/* Tabs container and tabs styling */
 [role="tablist"] {
-    background-color: #f3e5f5; /* lavender light */
+    background-color: #f3e5f5;
     border-radius: 16px;
     padding: 8px 20px;
     margin-bottom: 20px;
 }
 [role="tab"] {
-    color: #4db6ac; /* soft teal */
+    color: #4db6ac;
     font-weight: 600;
     border-radius: 16px;
     padding: 10px 26px;
@@ -139,9 +153,8 @@ st.markdown("""
     box-shadow: 0 6px 20px rgba(77, 182, 172, 0.45);
 }
 
-/* Textareas */
 textarea {
-    background-color: #f1fafe; /* very light blue */
+    background-color: #f1fafe;
     color: #37474f;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
     font-size: 1rem;
@@ -153,7 +166,6 @@ textarea {
     box-shadow: inset 0 0 10px rgba(128, 203, 196, 0.2);
 }
 
-/* Scrollbar for textareas */
 textarea::-webkit-scrollbar {
     width: 12px;
 }
@@ -167,26 +179,12 @@ textarea::-webkit-scrollbar-thumb {
     border: 3px solid #ede7f6;
 }
 
-/* Practice checklist label color */
 .css-1r6slb0 span {
-    color: #00796b; /* darker teal */
+    color: #00796b;
     font-weight: 700;
 }
 </style>
 """, unsafe_allow_html=True)
-
-# Load Gemini API Key from environment variable or Streamlit secrets
-load_dotenv()
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
-
-# Initialize Firebase Admin SDK using service account from Streamlit secrets
-firebase_creds_str = st.secrets["FIREBASE_SERVICE_ACCOUNT"]
-firebase_creds_dict = json.loads(firebase_creds_str)
-
-if not firebase_admin._apps:
-    cred = credentials.Certificate(firebase_creds_dict)
-    firebase_admin.initialize_app(cred)
-db = firestore.client()
 
 def get_ai_response(prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
@@ -281,7 +279,6 @@ def display_practice_checklist(practice_text):
         checked = st.checkbox(item, value=st.session_state.practice_states[key], key=key)
         st.session_state.practice_states[key] = checked
 
-# Firestore save/load functions
 def save_progress(user_id, practice_states):
     doc_ref = db.collection("users").document(user_id)
     doc_ref.set({"practice_progress": practice_states}, merge=True)
@@ -294,40 +291,6 @@ def load_progress(user_id):
         data = doc.to_dict()
         return data.get("practice_progress", {})
     return {}
-
-def simple_login():
-    if "user_email" not in st.session_state:
-        st.session_state.user_email = None
-
-    if st.session_state.user_email is None:
-        st.markdown('<div id="login-container">', unsafe_allow_html=True)
-        st.markdown('<div id="login-box">', unsafe_allow_html=True)
-        st.markdown('<h2>Welcome! Please Login</h2>', unsafe_allow_html=True)
-
-        with st.form(key="login_form"):
-            email = st.text_input("Enter your email", key="login_email")
-            submit_button = st.form_submit_button(label="Login")
-
-        if submit_button:
-            if email:
-                st.session_state.user_email = email
-                st.experimental_rerun()
-            else:
-                st.error("Please enter an email to login")
-                
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.markdown('</div>', unsafe_allow_html=True)
-        st.stop()
-    else:
-        st.sidebar.header("User Authentication")
-        st.sidebar.write(f"Logged in as {st.session_state.user_email}")
-        if st.sidebar.button("Logout"):
-            st.session_state.user_email = None
-            st.experimental_rerun()
-
-simple_login()
-
-user_id = st.session_state.user_email  # as user_id for demo
 
 st.set_page_config(page_title="AI Career Advisor with Firestore", layout="wide")
 st.title("AI-Powered Career Advisor with Firestore Persistence")
@@ -423,10 +386,10 @@ with tabs[2]:
     col1, col2 = st.columns(2)
     with col1:
         if st.button("Save Practice Progress"):
-            save_progress(user_id, st.session_state.practice_states)
+            save_progress(st.secrets["USER_ID"], st.session_state.practice_states)
     with col2:
         if st.button("Load Practice Progress"):
-            loaded = load_progress(user_id)
+            loaded = load_progress(st.secrets["USER_ID"])
             if loaded:
                 st.session_state.practice_states = loaded
                 st.experimental_rerun()
