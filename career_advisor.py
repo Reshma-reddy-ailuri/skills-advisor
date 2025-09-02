@@ -30,7 +30,7 @@ def sidebar_login():
         st.sidebar.success(f"Logged in as {email}")
     if logout_button:
         st.session_state.user_email = ""
-        # No explicit rerun; manual refresh needed
+        # Manual refresh needed after logout
 
 sidebar_login()
 
@@ -51,7 +51,6 @@ st.markdown("""
     min-width: 320px !important;
     border: none !important;
 }
-
 .block-container {
     background-color: #f9fdfa;
     padding: 32px 48px 48px 48px !important;
@@ -60,16 +59,13 @@ st.markdown("""
     font-size: 1.1rem;
     color: #37474f;
 }
-
 h2, h3 {
     color: #4db6ac;
     padding-bottom: 8px;
 }
-
 ul {
     padding-left: 1.5rem;
 }
-
 li {
     margin-bottom: 12px;
 }
@@ -118,9 +114,9 @@ def split_sections(text):
 
 def extract_json_block(text):
     text = text.strip()
-    if text.startswith("```json"):
+    if text.startswith("```
         text = text[len("```json"):].strip()
-    if text.endswith("```"):
+    if text.endswith("```
         text = text[:-3].strip()
     return text
 
@@ -153,8 +149,8 @@ def checklist_with_persistence(items):
         key = f"practice_{i}"
         if key not in st.session_state:
             st.session_state[key] = False
-        current = st.checkbox(item, value=st.session_state[key], key=key)
-        st.session_state[key] = current
+        checked = st.checkbox(item, value=st.session_state[key], key=key)
+        st.session_state[key] = checked
 
 def render_learning_resources(text):
     lines = text.strip().split("\n")
