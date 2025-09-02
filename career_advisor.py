@@ -30,7 +30,7 @@ def sidebar_login():
         st.sidebar.success(f"Logged in as {email}")
     if logout_button:
         st.session_state.user_email = ""
-        # No experimental_rerun, manual refresh needed
+        # No explicit rerun; manual refresh needed
 
 sidebar_login()
 
@@ -40,54 +40,38 @@ if not st.session_state.user_email:
 
 user_id = st.session_state.user_email
 
-# Place CSS palette immediately after login for styling
+# CSS pastel palette with padding, no borders for content
 st.markdown("""
 <style>
 [data-testid="stSidebar"] {
-    background: #ede7f6;
+    background-color: #f3e5f5; /* soft lavender */
     color: #37474f;
-    border-right: 3px solid #80cbc4;
-    padding: 20px 25px 50px 25px !important;
+    padding: 24px 20px 40px 20px !important;
     font-weight: 600;
     min-width: 320px !important;
+    border: none !important;
 }
-[data-testid="stSidebar"] input,
-[data-testid="stSidebar"] textarea,
-[data-testid="stSidebar"] select {
-    border-radius: 10px !important;
-    border: 1.5px solid #b2dfdb !important;
-    padding: 10px 14px !important;
-    margin-bottom: 16px !important;
-    font-size: 15px !important;
-    color: #37474f !important;
+
+.block-container {
+    background-color: #f9fdfa; /* soft mint */
+    padding: 32px 48px 48px 48px !important;
+    max-width: 900px;
+    margin: auto;
+    font-size: 1.1rem;
+    color: #37474f;
 }
-.stButton > button {
-    background-color: #4db6ac;
-    color: white !important;
-    border-radius: 14px;
-    padding: 14px 40px;
-    margin-top: 18px !important;
+
+h2, h3 {
+    color: #4db6ac;
+    padding-bottom: 8px;
 }
-.css-1d391kg {
-    max-width: 900px !important;
-    margin: 0 auto !important;
-    padding: 32px 24px !important;
+
+ul {
+    padding-left: 1.5rem;
 }
-[role="tabpanel"] {
-    border: 1.5px solid #b2dfdb;
-    border-radius: 14px;
-    padding: 20px;
-    background-color: #f9fdfa;
-    margin-bottom: 30px;
-}
-textarea {
-    background-color: #f1fafe;
-    border-radius: 14px;
-    border: 1.5px solid #b2dfdb;
-    padding: 14px 20px;
-    min-height: 280px;
-    resize: vertical;
-    box-shadow: inset 0 0 10px rgba(128, 203, 196, 0.2);
+
+li {
+    margin-bottom: 12px;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -139,7 +123,8 @@ def render_graphviz_roadmap(roadmap_json):
     try:
         data = json.loads(roadmap_json)
         from graphviz import Digraph
-        dot = Digraph()
+        dot = Digraph(node_attr={'style': 'filled', 'fillcolor': '#ade8f4', 'fontname': 'Segoe UI'})
+        dot.attr(rankdir='LR', size='8,5')
         for step in data:
             num = str(step.get("step_number", "?"))
             label = f"{step.get('title', '')}\n({step.get('expected_duration_weeks', '?')} weeks)"
@@ -153,6 +138,18 @@ def render_graphviz_roadmap(roadmap_json):
 
 def get_checklist_items(practice_text):
     return [line[2:].strip() for line in practice_text.split('\n') if line.strip().startswith("- ")]
+
+def render_learning_resources(text):
+    lines = text.strip().split("\n")
+    md_lines = []
+    for line in lines:
+        line = line.strip()
+        if line:
+            if not line.startswith("- "):
+                md_lines.append(f"- {line}")
+            else:
+                md_lines.append(line)
+    st.markdown("\n".join(md_lines))
 
 def generate_linkedin_job_url(keywords, location):
     base_url = "https://www.linkedin.com/jobs/search/"
@@ -254,7 +251,10 @@ with tabs[2]:
 
 with tabs[3]:
     st.header("Learning Resources")
-    st.markdown(sections["learning"].strip())
+    if sections["learning"].strip():
+        render_learning_resources(sections["learning"])
+    else:
+        st.info("No learning resources found.")
 
 with tabs[4]:
     st.header("Practice Websites")
