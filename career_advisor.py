@@ -137,7 +137,7 @@ if not st.session_state.logged_in:
         if username and email:
             st.session_state.logged_in = True
             st.session_state.username = username
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Please fill in all fields")
 
