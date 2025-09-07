@@ -52,18 +52,15 @@ st.markdown(
     unsafe_allow_html=True,
 )
 
+# --- FUNCTION DEFINITIONS ---
+
 
 def get_ai_response(prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     headers = {"Content-Type": "application/json"}
     data = {
         "contents": [{"parts": [{"text": prompt}]}],
-        "generationConfig": {
-            "temperature": 0.7,
-            "maxOutputTokens": 1600,
-            "topP": 1,
-            "topK": 1,
-        },
+        "generationConfig": {"temperature": 0.7, "maxOutputTokens": 1600, "topP": 1, "topK": 1},
     }
     response = requests.post(url, headers=headers, json=data)
     if response.status_code == 200:
@@ -112,8 +109,10 @@ def render_graphviz_roadmap(roadmap_json):
         if not data:
             st.info("Roadmap JSON is empty.")
             return
-        dot = graphviz.Digraph(node_attr={"style": "filled", "fillcolor": "#ade8f4", "fontname": "Segoe UI"})
-        dot.attr(rankdir="TB", size="8,5")
+        dot = graphviz.Digraph(
+            node_attr={"style": "filled", "fillcolor": "#ade8f4", "fontname": "Segoe UI"}
+        )
+        dot.attr(rankdir="TB", size="8,5")  # Vertical layout for better readability
         for step in data:
             num = str(step.get("step_number", "?"))
             label = f"{step.get('title', '')}\n({step.get('expected_duration_weeks', '?')} weeks)"
@@ -191,32 +190,29 @@ def load_progress(user_id):
     return None
 
 
-st.header("AI-Powered Career Advisor with Referrals")
+# --- SIDEBAR INPUTS ---
 with st.sidebar:
     st.header("Profile Information")
     age = st.number_input("Age", 10, 60)
     location = st.text_input("City or State")
     education = st.text_input("Education Background")
 
-st.write("Enter skills and your proficiency (1-5):")
-skills = {}
-for i in range(3):
-    skill = st.text_input(f"Skill {i+1}", key=f"skill{i}")
-    level = st.slider(f"Proficiency Level {i+1}", 1, 5, 3, key=f"level{i}")
-    if skill:
-        skills[skill] = level
-skills_text = ", ".join([f"{s} (level {l})" for s, l in skills.items()])
+    st.write("Enter skills and your proficiency (1-5):")
+    skills = {}
+    for i in range(3):
+        skill = st.text_input(f"Skill {i+1}", key=f"skill{i}")
+        level = st.slider(f"Proficiency Level {i+1}", 1, 5, 3, key=f"level{i}")
+        if skill:
+            skills[skill] = level
+    interests = st.text_input("Interests (comma-separated)")
+    goals = st.text_input("Career Goals")
 
-interests = st.text_input("Interests (comma-separated)")
-goals = st.text_input("Career Goals")
+    submit = st.button("Get Career Advice")
 
-submit = st.button("Get Career Advice")
-
-if not submit:
-    st.info("Fill profile and click 'Get Career Advice' to generate suggestions.")
-    st.stop()
-
-prompt = f"""
+if submit:
+    # Build prompt
+    skills_text = ", ".join([f"{s} (level {l})" for s, l in skills.items()])
+    prompt = f"""
 I am a {age}-year-old student from {location}, India. My education background: {education}. My skills with proficiency levels: {skills_text}. My interests include: {interests}. My career goals are: {goals}.
 Please provide the output in the following exact sections:
 ===Career Suggestions=== Provide exactly 3 career suggestions, each as a bullet point like:
@@ -271,86 +267,89 @@ Career Name: brief explanation.
 ===Practice Websites=== List practice websites with markdown links like [site](https://www.notion.so/url).
 No extra text outside these sections.
 """
+    ai_response = get_ai_response(prompt)
+    sections = split_sections(ai_response)
 
-ai_response = get_ai_response(prompt)
-sections = split_sections(ai_response)
+    # Show outputs in main section
+    st.header("AI-Powered Career Advisor Results")
 
-# Debug to see raw roadmap if issues
-#st.text_area("Raw roadmap data (please verify format):", sections.get("roadmap", ""), height=200)
+    tabs = st.tabs(
+        [
+            "Career Suggestions",
+            "Roadmap",
+            "Skill Gap Analysis",
+            "Learning Resources",
+            "Practice Websites",
+            "Job Search Platforms",
+        ]
+    )
 
-tabs = st.tabs(
-    [
-        "Career Suggestions",
-        "Roadmap",
-        "Skill Gap Analysis",
-        "Learning Resources",
-        "Practice Websites",
-        "Job Search Platforms",
-    ]
-)
-
-with tabs[0]:
-    st.header("Career Suggestions")
-    career_text = sections.get("career", "").strip()
-    if career_text:
-        render_career_suggestions(career_text)
-    else:
-        st.info("No career suggestions available.")
-
-with tabs[1]:
-    st.header("Career Roadmap")
-    roadmap_text = sections.get("roadmap", "").strip()
-    if roadmap_text:
-        render_graphviz_roadmap(roadmap_text)
-    else:
-        st.info("No roadmap data available.")
-
-with tabs[2]:
-    st.header("Skill Gap Analysis & Practice Plan")
-    skill_gap_text = sections.get("skill_gap", "").strip()
-    if skill_gap_text:
-        checklist_items = get_checklist_items(skill_gap_text)
-        if checklist_items:
-            st.write("Practice Plan Checklist:")
-            checklist_with_persistence(checklist_items)
+    with tabs[0]:
+        st.header("Career Suggestions")
+        career_text = sections.get("career", "").strip()
+        if career_text:
+            render_career_suggestions(career_text)
         else:
-            st.markdown(skill_gap_text)
-        col1, col2 = st.columns(2)
-        with col1:
-            if st.button("Save Practice Progress"):
-                save_progress(user_id, st.session_state.practice_states)
-        with col2:
-            if st.button("Load Practice Progress"):
-                loaded_states = load_progress(user_id)
-                if loaded_states:
-                    st.session_state.practice_states = loaded_states
-                    st.experimental_rerun()
-                else:
-                    st.warning("No saved progress found.")
-    else:
-        st.info("No skill gap analysis available.")
+            st.info("No career suggestions available.")
 
-with tabs[3]:
-    st.header("Learning Resources")
-    learning_text = sections.get("learning", "").strip()
-    if learning_text:
-        render_learning_resources(learning_text)
-    else:
-        st.info("No learning resources provided.")
+    with tabs[1]:
+        st.header("Career Roadmap")
+        roadmap_text = sections.get("roadmap", "").strip()
+        if roadmap_text:
+            render_graphviz_roadmap(roadmap_text)
+        else:
+            st.info("No roadmap data available.")
 
-with tabs[4]:
-    st.header("Practice Websites")
-    practice_websites_text = sections.get("practice_websites", "").strip()
-    if practice_websites_text:
-        st.markdown(practice_websites_text, unsafe_allow_html=True)
-    else:
-        st.info("No practice websites listed.")
+    with tabs[2]:
+        st.header("Skill Gap Analysis & Practice Plan")
+        skill_gap_text = sections.get("skill_gap", "").strip()
+        if skill_gap_text:
+            checklist_items = get_checklist_items(skill_gap_text)
+            if checklist_items:
+                st.write("Practice Plan Checklist:")
+                checklist_with_persistence(checklist_items)
+            else:
+                st.markdown(skill_gap_text)
+            col1, col2 = st.columns(2)
+            with col1:
+                if st.button("Save Practice Progress"):
+                    save_progress(user_id, st.session_state.practice_states)
+            with col2:
+                if st.button("Load Practice Progress"):
+                    loaded_states = load_progress(user_id)
+                    if loaded_states:
+                        st.session_state.practice_states = loaded_states
+                        st.experimental_rerun()
+                    else:
+                        st.warning("No saved progress found.")
+        else:
+            st.info("No skill gap analysis available.")
 
-with tabs[5]:
-    st.header("Job Search Platforms")
-    if skills and location:
-        job_links = get_job_platform_links(", ".join([f"{s} (level {l})" for s, l in skills.items()]), location)
-        for platform, url in job_links.items():
-            st.markdown(f"- [{platform}]({url})", unsafe_allow_html=True)
-    else:
-        st.info("Enter skills and location to view job search platforms.")
+    with tabs[3]:
+        st.header("Learning Resources")
+        learning_text = sections.get("learning", "").strip()
+        if learning_text:
+            render_learning_resources(learning_text)
+        else:
+            st.info("No learning resources provided.")
+
+    with tabs[4]:
+        st.header("Practice Websites")
+        practice_websites_text = sections.get("practice_websites", "").strip()
+        if practice_websites_text:
+            st.markdown(practice_websites_text, unsafe_allow_html=True)
+        else:
+            st.info("No practice websites listed.")
+
+    with tabs[5]:
+        st.header("Job Search Platforms")
+        if skills and location:
+            job_links = get_job_platform_links(
+                ", ".join([f"{s} (level {l})" for s, l in skills.items()]), location
+            )
+            for platform, url in job_links.items():
+                st.markdown(f"- [{platform}]({url})", unsafe_allow_html=True)
+        else:
+            st.info("Enter skills and location to view job search platforms.")
+else:
+    st.info("Fill profile and click 'Get Career Advice' to generate suggestions.")
