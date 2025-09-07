@@ -36,6 +36,10 @@ st.markdown("""
 # -------------------- Session State --------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
+if "show_results" not in st.session_state:
+    st.session_state.show_results = False
+if "checklist_states" not in st.session_state:
+    st.session_state.checklist_states = {}
 
 # -------------------- Mock Data Function --------------------
 def generate_mock_career_advice(user_data):
@@ -97,7 +101,6 @@ def render_badges(items, badge_class="badge", clickable=False):
             st.markdown(f'<span class="{badge_class}">{item if not isinstance(item, tuple) else item[0]}</span>', unsafe_allow_html=True)
 
 def render_checklist(checklist_text):
-    st.session_state.checklist_states = st.session_state.get("checklist_states", {})
     for line in checklist_text.split("\n"):
         line = line.strip()
         if line.startswith("- [ ]"):
@@ -127,59 +130,58 @@ def render_career_suggestions(career_dict):
 if not st.session_state.logged_in:
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.markdown("<h2>Login to Career Advisor</h2>", unsafe_allow_html=True)
-
     username = st.text_input("Username")
     email = st.text_input("Email")
-
     if st.button("Login"):
         if username and email:
             st.session_state.logged_in = True
             st.session_state.username = username
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.error("Please fill in all fields")
-
     st.markdown('</div>', unsafe_allow_html=True)
 
 # -------------------- Main App --------------------
 else:
-    st.markdown(
-        f'<div class="profile-icon">{st.session_state.username[0].upper()}</div>',
-        unsafe_allow_html=True,
-    )
-
+    st.markdown(f'<div class="profile-icon">{st.session_state.username[0].upper()}</div>', unsafe_allow_html=True)
     st.title(f"Welcome {st.session_state.username} 👋")
     st.write("Explore your personalized career advisor dashboard.")
 
-    # -------------------- Input Form --------------------
-    st.header("Enter Your Profile Details")
-    with st.form("user_input_form"):
-        age = st.number_input("Age", min_value=10, max_value=100, value=25)
-        location = st.text_input("Location")
-        education = st.text_input("Education")
-        years_exp = st.number_input("Years of Experience", min_value=0, max_value=50, value=2)
-        target_role = st.text_input("Target Career Role")
-        skill_1 = st.text_input("Skill 1 (Python / SQL / etc.)")
-        skill_1_level = st.selectbox("Skill 1 Proficiency", ["Beginner", "Intermediate", "Advanced"])
-        skill_2 = st.text_input("Skill 2")
-        skill_2_level = st.selectbox("Skill 2 Proficiency", ["Beginner", "Intermediate", "Advanced"])
-        skill_3 = st.text_input("Skill 3")
-        skill_3_level = st.selectbox("Skill 3 Proficiency", ["Beginner", "Intermediate", "Advanced"])
-        submit_btn = st.form_submit_button("Get Career Advice")
+    # -------------------- Input Page --------------------
+    if not st.session_state.show_results:
+        st.header("Enter Your Profile Details")
+        with st.form("user_input_form"):
+            age = st.number_input("Age", min_value=10, max_value=100, value=25)
+            location = st.text_input("Location")
+            education = st.text_input("Education")
+            years_exp = st.number_input("Years of Experience", min_value=0, max_value=50, value=2)
+            target_role = st.text_input("Target Career Role")
+            skill_1 = st.text_input("Skill 1 (Python / SQL / etc.)")
+            skill_1_level = st.selectbox("Skill 1 Proficiency", ["Beginner", "Intermediate", "Advanced"])
+            skill_2 = st.text_input("Skill 2")
+            skill_2_level = st.selectbox("Skill 2 Proficiency", ["Beginner", "Intermediate", "Advanced"])
+            skill_3 = st.text_input("Skill 3")
+            skill_3_level = st.selectbox("Skill 3 Proficiency", ["Beginner", "Intermediate", "Advanced"])
+            submit_btn = st.form_submit_button("Get Career Advice")
 
-    if submit_btn:
-        user_data = {
-            "age": age,
-            "location": location,
-            "education": education,
-            "experience": years_exp,
-            "target_role": target_role,
-            "skills": f"{skill_1} ({skill_1_level}), {skill_2} ({skill_2_level}), {skill_3} ({skill_3_level})"
-        }
+        if submit_btn:
+            st.session_state.user_data = {
+                "age": age,
+                "location": location,
+                "education": education,
+                "experience": years_exp,
+                "target_role": target_role,
+                "skills": f"{skill_1} ({skill_1_level}), {skill_2} ({skill_2_level}), {skill_3} ({skill_3_level})"
+            }
+            st.session_state.show_results = True
+            st.experimental_rerun()
 
+    # -------------------- Results Page --------------------
+    else:
+        user_data = st.session_state.user_data
         sections = generate_mock_career_advice(user_data)
-
         st.header("AI-Powered Career Advisor Results")
+
         tabs = st.tabs([
             "Career Suggestions",
             "Roadmap",
@@ -189,34 +191,44 @@ else:
             "Job Search Platforms"
         ])
 
-        # ---------------- Career Suggestions ----------------
+        # Career Suggestions
         with tabs[0]:
             st.header("Career Suggestions")
             render_career_suggestions(sections["career"])
 
-        # ---------------- Roadmap ----------------
+        # Roadmap
         with tabs[1]:
             st.header("Career Roadmap")
             render_graphviz_roadmap(sections["roadmap"])
 
-        # ---------------- Skill Gap ----------------
+        # Skill Gap Analysis
         with tabs[2]:
             st.header("Skill Gap Analysis & Practice Plan")
-            st.markdown(sections["skill_gap"].split("Practice Plan Checklist:")[0])
-            checklist_text = "Practice Plan Checklist:\n" + sections["skill_gap"].split("Practice Plan Checklist:")[-1]
-            render_checklist(checklist_text)
+            skill_gap_text = sections["skill_gap"]
+            if "Practice Plan Checklist:" in skill_gap_text:
+                skills_part, checklist_part = skill_gap_text.split("Practice Plan Checklist:", 1)
+            else:
+                skills_part, checklist_part = skill_gap_text, ""
+            if skills_part.strip():
+                st.markdown(skills_part)
+            render_checklist("Practice Plan Checklist:" + checklist_part)
 
-        # ---------------- Learning Resources ----------------
+        # Learning Resources
         with tabs[3]:
             st.header("Learning Resources")
             render_badges(sections["learning"], clickable=True)
 
-        # ---------------- Practice Websites ----------------
+        # Practice Websites
         with tabs[4]:
             st.header("Practice Websites")
             render_badges(sections["practice_websites"], badge_class="link-badge", clickable=True)
 
-        # ---------------- Job Search Platforms ----------------
+        # Job Search Platforms
         with tabs[5]:
             st.header("Job Search Platforms")
             render_badges(sections["job_platforms"], badge_class="link-badge", clickable=True)
+
+        # Back Button
+        if st.button("⬅ Back to Input Form"):
+            st.session_state.show_results = False
+            st.experimental_rerun()
