@@ -18,6 +18,7 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 db = firestore.client()
 
+
 def sidebar_login():
     st.sidebar.header("User Login")
     if "user_email" not in st.session_state:
@@ -31,13 +32,15 @@ def sidebar_login():
     if logout_button:
         st.session_state.user_email = ""
 
+
 sidebar_login()
 if not st.session_state.user_email:
     st.info("Please login using the sidebar to continue.")
     st.stop()
 user_id = st.session_state.user_email
 
-st.markdown("""
+st.markdown(
+    """
     <style>
     [data-testid="stSidebar"] { background-color: #f3e5f5; color: #37474f; padding: 24px 20px 40px 20px !important; font-weight: 600; min-width: 320px !important; border: none !important; }
     .block-container { background-color: #f9fdfa; padding: 32px 48px 48px 48px !important; max-width: 900px; margin: auto; font-size: 1.1rem; color: #37474f; }
@@ -45,7 +48,10 @@ st.markdown("""
     ul { padding-left: 1.5rem; }
     li { margin-bottom: 12px; }
     </style>
-""", unsafe_allow_html=True)
+    """,
+    unsafe_allow_html=True,
+)
+
 
 def get_ai_response(prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
@@ -56,8 +62,8 @@ def get_ai_response(prompt):
             "temperature": 0.7,
             "maxOutputTokens": 1600,
             "topP": 1,
-            "topK": 1
-        }
+            "topK": 1,
+        },
     }
     response = requests.post(url, headers=headers, json=data)
     if response.status_code == 200:
@@ -68,6 +74,7 @@ def get_ai_response(prompt):
             return f"Could not parse AI response: {e}"
     else:
         return f"API error: {response.status_code}"
+
 
 def split_sections(text):
     sections = {"career": "", "roadmap": "", "skill_gap": "", "learning": "", "practice_websites": ""}
@@ -87,11 +94,13 @@ def split_sections(text):
             sections[current] += line + "\n"
     return sections
 
+
 def extract_json_block(text):
     text = text.strip()
     if text.startswith("json"):
-        text = text[len("json"):].strip()
+        text = text[len("json") :].strip()
     return text
+
 
 def render_graphviz_roadmap(roadmap_json):
     roadmap_json = extract_json_block(roadmap_json)
@@ -103,23 +112,25 @@ def render_graphviz_roadmap(roadmap_json):
         if not data:
             st.info("Roadmap JSON is empty.")
             return
-        dot = graphviz.Digraph(node_attr={'style': 'filled', 'fillcolor': '#ade8f4', 'fontname': 'Segoe UI'})
-        dot.attr(rankdir='LR', size='8,5')
+        dot = graphviz.Digraph(node_attr={"style": "filled", "fillcolor": "#ade8f4", "fontname": "Segoe UI"})
+        dot.attr(rankdir="LR", size="8,5")
         for step in data:
             num = str(step.get("step_number", "?"))
             label = f"{step.get('title', '')}\n({step.get('expected_duration_weeks', '?')} weeks)"
             dot.node(num, label)
-        for i in range(len(data)-1):
+        for i in range(len(data) - 1):
             from_node = str(data[i].get("step_number", "?"))
-            to_node = str(data[i+1].get("step_number", "?"))
+            to_node = str(data[i + 1].get("step_number", "?"))
             dot.edge(from_node, to_node)
         st.graphviz_chart(dot)
     except Exception as e:
         st.error(f"Could not draw roadmap: {e}")
         st.text_area("Raw roadmap data (please verify format):", roadmap_json, height=200)
 
+
 def get_checklist_items(practice_text):
-    return [line[2:].strip() for line in practice_text.split('\n') if line.strip().startswith("- ")]
+    return [line[2:].strip() for line in practice_text.split("\n") if line.strip().startswith("- ")]
+
 
 def checklist_with_persistence(items):
     if "practice_states" not in st.session_state:
@@ -130,6 +141,7 @@ def checklist_with_persistence(items):
             st.session_state.practice_states[key] = False
         checked = st.checkbox(item, key=key, value=st.session_state.practice_states[key])
         st.session_state.practice_states[key] = checked
+
 
 def render_learning_resources(text):
     lines = text.strip().split("\n")
@@ -143,21 +155,25 @@ def render_learning_resources(text):
                 md_lines.append(f"- {line}")
     st.markdown("\n".join(md_lines))
 
+
 def render_career_suggestions(text):
     lines = [line.lstrip("-* \t").strip() for line in text.splitlines() if line.strip()]
     st.markdown("\n".join(f"- {line}" for line in lines))
+
 
 def generate_linkedin_job_url(keywords, location):
     base_url = "https://www.linkedin.com/jobs/search/"
     query = f"?keywords={keywords.replace(' ', '%20')}&location={location.replace(' ', '%20')}"
     return base_url + query
 
+
 def get_job_platform_links(keywords, location):
     return {
         "LinkedIn Jobs": generate_linkedin_job_url(keywords, location),
         "Unstop Jobs": f"https://unstop.com/jobs?search={keywords.replace(' ', '%20')}&location={location.replace(' ', '%20')}",
-        "Hiring Cloud": f"https://hiringcloud.in/jobs?query={keywords.replace(' ', '%20')}"
+        "Hiring Cloud": f"https://hiringcloud.in/jobs?query={keywords.replace(' ', '%20')}",
     }
+
 
 def save_progress(user_id, practice_states):
     if user_id and practice_states:
@@ -166,12 +182,14 @@ def save_progress(user_id, practice_states):
     else:
         st.warning("No progress to save.")
 
+
 def load_progress(user_id):
     if user_id:
         doc = db.collection("practice_progress").document(user_id).get()
         if doc.exists:
             return doc.to_dict().get("states", {})
     return None
+
 
 st.header("AI-Powered Career Advisor with Referrals")
 with st.sidebar:
@@ -205,33 +223,71 @@ Please provide the output in the following exact sections:
 Career Name: brief explanation.
 ===Roadmap===
 [
-  {
+  {{
     "step_number": 1,
     "title": "Foundational Math & Statistics",
     "description": "Strengthen linear algebra, calculus, probability, and statistics.",
     "expected_duration_weeks": 8
-  },
-  {
+  }},
+  {{
     "step_number": 2,
     "title": "Python Programming for Data Science",
     "description": "Master NumPy, Pandas, Matplotlib, Seaborn, and Scikit-learn.",
     "expected_duration_weeks": 12
-  },
-  ...
-  {
+  }},
+  {{
+    "step_number": 3,
+    "title": "Machine Learning Fundamentals",
+    "description": "Learn various ML algorithms (regression, classification, clustering).",
+    "expected_duration_weeks": 16
+  }},
+  {{
+    "step_number": 4,
+    "title": "Deep Learning (Optional but Recommended)",
+    "description": "Understand neural networks, CNNs, RNNs, and TensorFlow/PyTorch.",
+    "expected_duration_weeks": 12
+  }},
+  {{
+    "step_number": 5,
+    "title": "Data Visualization & Communication",
+    "description": "Improve data storytelling and presentation skills.",
+    "expected_duration_weeks": 4
+  }},
+  {{
+    "step_number": 6,
+    "title": "Capstone Project",
+    "description": "Work on a real-world data science project to showcase skills.",
+    "expected_duration_weeks": 12
+  }},
+  {{
     "step_number": 7,
     "title": "Job Search & Networking",
     "description": "Prepare resume, portfolio, and network with professionals.",
     "expected_duration_weeks": 8
-  }
+  }}
 ]
+===Skill Gap Analysis & Practice Plan=== List skills to develop and provide a bullet point practice plan.
+===Learning Resources=== List relevant courses, books, or tutorials as bullet points.
+===Practice Websites=== List practice websites with markdown links like [site](https://www.notion.so/url).
+No extra text outside these sections.
+"""
+
 ai_response = get_ai_response(prompt)
 sections = split_sections(ai_response)
 
 # Debug to see raw roadmap if issues
 st.text_area("Raw roadmap data (please verify format):", sections.get("roadmap", ""), height=200)
 
-tabs = st.tabs(["Career Suggestions", "Roadmap", "Skill Gap Analysis", "Learning Resources", "Practice Websites", "Job Search Platforms"])
+tabs = st.tabs(
+    [
+        "Career Suggestions",
+        "Roadmap",
+        "Skill Gap Analysis",
+        "Learning Resources",
+        "Practice Websites",
+        "Job Search Platforms",
+    ]
+)
 
 with tabs[0]:
     st.header("Career Suggestions")
