@@ -205,29 +205,25 @@ with tabs[0]:
         st.info("No career suggestions available.")
 
 with tabs[1]:
-    st.header("Roadmap")
-    roadmap_text = sections.get("roadmap", "").strip()
-    if roadmap_text:
-        render_graphviz_roadmap(roadmap_text)
-    else:
-        st.info("No roadmap data available.")
-
+    st.header("### Career Roadmap")
+    render_graphviz_roadmap(roadmap)
 with tabs[2]:
-    st.header("Skill Gap Analysis & Practice Plan")
-    skill_gap_text = sections.get("skill_gap", "").strip()
-    if skill_gap_text:
-        checklist_items = get_checklist_items(skill_gap_text)
-        if checklist_items:
-            st.write("Practice Plan Checklist:")
-            checklist_with_persistence(checklist_items)
-        extra_options = skill_gap_text.split("\n")
-        extras = [line for line in extra_options if not line.strip().startswith("- ")]
-        if extras:
-            st.markdown("\n".join(extras))
-        else:
-            st.markdown(skill_gap_text)
-    else:
-        st.info("No skill gap analysis available.")
+    st.header("### Skill Gap Analysis & Practice Plan")
+    practice_text = sections.get("skill_gap", "No practice plan found.")
+    display_practice_checklist(practice_text)
+
+    col1, col2 = st.columns(2)
+    with col1:
+        if st.button("Save Practice Progress"):
+            save_progress(user_id, st.session_state.practice_states)
+    with col2:
+        if st.button("Load Practice Progress"):
+            loaded = load_progress(user_id)
+            if loaded:
+                st.session_state.practice_states = loaded
+                st.experimental_rerun()
+            else:
+                st.warning("No saved progress found.")
 
 with tabs[3]:
     st.header("Learning Resources")
