@@ -1,81 +1,96 @@
 import streamlit as st
 from graphviz import Digraph
 
-# -------------------- CSS Styling with Background Image --------------------
+# -------------------- CSS Styling with blurred background --------------------
 st.markdown("""
-    <style>
-    /* Neutral main app background */
-    body {
-        background: #f5f7fa;
-        font-family: Arial, sans-serif;
-    }
+<style>
+/* Full-page blurred background image */
+body::before {
+    content: "";
+    position: fixed;
+    top:0; left:0;
+    width:100%; height:100%;
+    background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1350&q=80') no-repeat center center fixed;
+    background-size: cover;
+    filter: blur(8px);
+    z-index: -1;
+}
 
-    /* Card style for login, input, and result sections */
-    .card {
-        background-color: rgba(255, 255, 255, 0.95);
-        padding: 30px;
-        margin: 30px auto;
-        border-radius: 12px;
-        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-        max-width: 800px;
-    }
+/* Card style for login, form, and results */
+.card {
+    background-color: rgba(255,255,255,0.9);
+    border-radius: 15px;
+    padding: 30px;
+    margin: 40px auto;
+    max-width: 800px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+}
 
-    /* Section headers */
-    .card h2, .card h3 {
-        color: #333;
-    }
+/* Headers inside cards */
+.card h2, .card h3 {
+    color: #333;
+}
 
-    /* Inputs inside cards */
-    .card .stTextInput>div>div>input, .card .stNumberInput>div>div>input, .card .stSelectbox>div>div>div {
-        border-radius: 8px;
-        border: 1px solid #ccc;
-        padding: 10px;
-        font-size: 15px;
-        background-color: #f9f9f9;
-    }
+/* Inputs inside cards */
+.card .stTextInput>div>div>input, 
+.card .stNumberInput>div>div>input, 
+.card .stSelectbox>div>div>div {
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    padding: 10px;
+    font-size: 15px;
+    background-color: #f9f9f9;
+}
 
-    /* Buttons */
-    .card .stButton>button {
-        width: 100%;
-        padding: 10px;
-        border-radius: 8px;
-        background: #4CAF50;
-        color: white;
-        font-size: 16px;
-        border: none;
-    }
-    .card .stButton>button:hover { background: #45a049; }
+/* Buttons */
+.card .stButton>button {
+    width: 100%;
+    padding: 10px;
+    border-radius: 8px;
+    background: #4CAF50;
+    color: white;
+    font-size: 16px;
+    border: none;
+}
+.card .stButton>button:hover { background: #45a049; }
 
-    /* Tabs */
-    .stTabs [role="tab"] {
-        font-weight: bold;
-        font-size: 16px;
-        color: #333;
-    }
+/* Tabs styling */
+.stTabs [role="tab"] {
+    font-weight: bold;
+    font-size: 16px;
+    color: #333;
+}
 
-    /* Badge for links */
-    .badge, .link-badge {
-        display: inline-block;
-        padding: 6px 12px;
-        margin: 3px;
-        border-radius: 8px;
-        font-size: 14px;
-    }
+/* Badge for links */
+.badge, .link-badge {
+    display: inline-block;
+    padding: 6px 12px;
+    margin: 3px;
+    border-radius: 8px;
+    font-size: 14px;
+}
+.badge { background-color: #e0f0ff; color: #007acc; }
+.link-badge { background-color: #f0f0f0; color: #0645AD; text-decoration: none; }
 
-    .badge { background-color: #e0f0ff; color: #007acc; }
-    .link-badge { background-color: #f0f0f0; color: #0645AD; text-decoration: none; }
+/* Role sections */
+.role-section { 
+    margin-bottom: 15px; 
+    padding: 15px; 
+    background-color: #ffffffdd; 
+    border-left: 4px solid #4CAF50; 
+    border-radius: 8px; 
+    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+}
 
-    /* Role sections */
-    .role-section { 
-        margin-bottom: 15px; 
-        padding: 15px; 
-        background-color: #ffffffdd; 
-        border-left: 4px solid #4CAF50; 
-        border-radius: 8px; 
-        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-    }
-    </style>
+/* Profile icon */
+.profile-icon {
+    position: fixed; top: 15px; right: 25px; font-size: 18px; background: #4CAF50;
+    width: 40px; height: 40px; border-radius: 50%; text-align: center;
+    line-height: 40px; font-weight: bold; color: white; z-index: 9999;
+}
+</style>
 """, unsafe_allow_html=True)
+
 # -------------------- Session State --------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
@@ -170,7 +185,7 @@ def render_career_suggestions(career_dict):
 
 # -------------------- Login Page --------------------
 if not st.session_state.logged_in:
-    st.markdown('<div class="login-card">', unsafe_allow_html=True)
+    st.markdown('<div class="card">', unsafe_allow_html=True)
     st.markdown("<h2>Login to Career Advisor</h2>", unsafe_allow_html=True)
     username = st.text_input("Username")
     email = st.text_input("Email")
@@ -178,7 +193,7 @@ if not st.session_state.logged_in:
         if username and email:
             st.session_state.logged_in = True
             st.session_state.username = username
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.error("Please fill in all fields")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -191,6 +206,7 @@ else:
 
     # -------------------- Input Form --------------------
     if not st.session_state.show_results:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
         st.header("Enter Your Profile Details")
         with st.form("user_input_form"):
             age = st.number_input("Age", min_value=10, max_value=100, value=25)
@@ -198,13 +214,15 @@ else:
             education = st.text_input("Education")
             years_exp = st.number_input("Years of Experience", min_value=0, max_value=50, value=2)
             target_role = st.text_input("Target Career Role")
-            skill_1 = st.text_input("Skill 1 (Python / SQL / etc.)")
+            skill_1 = st.text_input("Skill 1")
             skill_1_level = st.selectbox("Skill 1 Proficiency", ["Beginner", "Intermediate", "Advanced"])
             skill_2 = st.text_input("Skill 2")
             skill_2_level = st.selectbox("Skill 2 Proficiency", ["Beginner", "Intermediate", "Advanced"])
             skill_3 = st.text_input("Skill 3")
             skill_3_level = st.selectbox("Skill 3 Proficiency", ["Beginner", "Intermediate", "Advanced"])
             submit_btn = st.form_submit_button("Get Career Advice")
+        st.markdown('</div>', unsafe_allow_html=True)
+
         if submit_btn:
             st.session_state.user_data = {
                 "age": age,
@@ -215,10 +233,11 @@ else:
                 "skills": f"{skill_1} ({skill_1_level}), {skill_2} ({skill_2_level}), {skill_3} ({skill_3_level})"
             }
             st.session_state.show_results = True
-            st.rerun()
+            st.experimental_rerun()
 
     # -------------------- Results Tabs --------------------
     else:
+        st.markdown('<div class="card">', unsafe_allow_html=True)
         user_data = st.session_state.user_data
         sections = generate_mock_career_advice(user_data)
 
@@ -261,4 +280,5 @@ else:
         # Option to go back and edit
         if st.button("Edit Profile Details"):
             st.session_state.show_results = False
-            st.rerun()
+            st.experimental_rerun()
+        st.markdown('</div>', unsafe_allow_html=True)
