@@ -128,7 +128,10 @@ def render_graphviz_roadmap(roadmap_json):
 
 
 def get_checklist_items(practice_text):
-    return [line[2:].strip() for line in practice_text.split("\n") if line.strip().startswith("- ")]
+    if "Practice Plan Checklist:" in practice_text:
+        checklist_part = practice_text.split("Practice Plan Checklist:")[1]
+        return [line[2:].strip() for line in checklist_part.split("\n") if line.strip().startswith("- ")]
+    return []
 
 
 def checklist_with_persistence(items):
@@ -262,9 +265,27 @@ Career Name: brief explanation.
     "expected_duration_weeks": 8
   }}
 ]
-===Skill Gap Analysis & Practice Plan=== List skills to develop and provide a bullet point practice plan.
+===Skill Gap Analysis & Practice Plan===
+Skills to Develop:
+- Advanced Python libraries (e.g., scikit-learn, TensorFlow, PyTorch)
+- Deep Learning techniques
+- Database management (SQL)
+- Big Data technologies (e.g., Spark, Hadoop - optional initially)
+- Data cleaning and preprocessing techniques
+- Model deployment and monitoring
+- Strong communication and presentation skills
+
+Practice Plan Checklist:
+- Work on personal projects using publicly available datasets.
+- Participate in Kaggle competitions to gain experience.
+- Contribute to data science projects on GitHub.
+- Showcase your projects and skills on a personal website or GitHub.
+- Present your projects to friends, family, or online communities.
+- Attend meetups and conferences related to data science.
+
 ===Learning Resources=== List relevant courses, books, or tutorials as bullet points.
 ===Practice Websites=== List practice websites with markdown links like [site](https://www.notion.so/url).
+
 No extra text outside these sections.
 """
     ai_response = get_ai_response(prompt)
@@ -304,12 +325,23 @@ No extra text outside these sections.
         st.header("Skill Gap Analysis & Practice Plan")
         skill_gap_text = sections.get("skill_gap", "").strip()
         if skill_gap_text:
-            checklist_items = get_checklist_items(skill_gap_text)
+            # Separate skills and checklist parts to render properly
+            if "Practice Plan Checklist:" in skill_gap_text:
+                skills_part, checklist_part = skill_gap_text.split("Practice Plan Checklist:", 1)
+            else:
+                skills_part, checklist_part = skill_gap_text, ""
+
+            # Show skills as markdown
+            if skills_part.strip():
+                st.markdown(skills_part)
+
+            # Extract checklist items and render checkboxes with persistence
+            checklist_items = get_checklist_items("Practice Plan Checklist:" + checklist_part)
             if checklist_items:
                 st.write("Practice Plan Checklist:")
                 checklist_with_persistence(checklist_items)
-            else:
-                st.markdown(skill_gap_text)
+
+            # Save/load buttons side by side
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("Save Practice Progress"):
@@ -344,9 +376,7 @@ No extra text outside these sections.
     with tabs[5]:
         st.header("Job Search Platforms")
         if skills and location:
-            job_links = get_job_platform_links(
-                ", ".join([f"{s} (level {l})" for s, l in skills.items()]), location
-            )
+            job_links = get_job_platform_links(", ".join([f"{s} (level {l})" for s, l in skills.items()]), location)
             for platform, url in job_links.items():
                 st.markdown(f"- [{platform}]({url})", unsafe_allow_html=True)
         else:
