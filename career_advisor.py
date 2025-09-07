@@ -38,6 +38,9 @@ if not st.session_state.user_email:
     st.info("Please login using the sidebar to continue.")
     st.stop()
 user_id = st.session_state.user_email
+if "practice_states" not in st.session_state:
+    st.session_state.practice_states = {}
+
 
 st.markdown(
     """
