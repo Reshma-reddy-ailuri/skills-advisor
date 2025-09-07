@@ -6,7 +6,7 @@ st.markdown("""
 <style>
 /* Full-page background for main app */
 [data-testid="stAppViewContainer"] {
-    background: url('https://img.freepik.com/free-photo/table-with-finance-work-stuff-coffee-money-tablet-pen-papers_1268-17457.jpg?semt=ais_hybrid&w=740&q=80') no-repeat center center fixed;
+    background: url('https://wallpapers.com/images/hd/ai-2352-x-1323-wallpaper-93172d4zomoyqxcx.jpg') no-repeat center center fixed;
     background-size: cover;
     position: relative;
 }
