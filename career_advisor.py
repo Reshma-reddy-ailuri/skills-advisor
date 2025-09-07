@@ -6,7 +6,7 @@ st.markdown("""
 <style>
 /* Full-page background for main app */
 [data-testid="stAppViewContainer"] {
-    background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1350&q=80') no-repeat center center fixed;
+    background: url('https://img.freepik.com/free-vector/futuristic-white-technology-background_23-2148390336.jpg?semt=ais_hybrid&w=740&q=80') no-repeat center center fixed;
     background-size: cover;
     position: relative;
 }
