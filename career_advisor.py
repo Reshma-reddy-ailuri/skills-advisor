@@ -113,7 +113,7 @@ def render_graphviz_roadmap(roadmap_json):
             st.info("Roadmap JSON is empty.")
             return
         dot = graphviz.Digraph(node_attr={"style": "filled", "fillcolor": "#ade8f4", "fontname": "Segoe UI"})
-        dot.attr(rankdir="LR", size="8,5")
+        dot.attr(rankdir="TB", size="8,5")
         for step in data:
             num = str(step.get("step_number", "?"))
             label = f"{step.get('title', '')}\n({step.get('expected_duration_weeks', '?')} weeks)"
