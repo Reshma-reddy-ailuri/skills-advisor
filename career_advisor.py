@@ -122,9 +122,15 @@ def get_checklist_items(practice_text):
     return [line[2:].strip() for line in practice_text.split('\n') if line.strip().startswith("- ")]
 
 def checklist_with_persistence(items):
+    # Initialize persist states if not present
+    if "practice_states" not in st.session_state:
+        st.session_state.practice_states = {}
     for i, item in enumerate(items):
         key = f"practice_{i}"
-        st.checkbox(item, key=key)
+        if key not in st.session_state.practice_states:
+            st.session_state.practice_states[key] = False
+        checked = st.checkbox(item, key=key, value=st.session_state.practice_states[key])
+        st.session_state.practice_states[key] = checked
 
 def render_learning_resources(text):
     lines = text.strip().split("\n")
@@ -153,6 +159,24 @@ def get_job_platform_links(keywords, location):
         "Unstop Jobs": f"https://unstop.com/jobs?search={keywords.replace(' ', '%20')}&location={location.replace(' ', '%20')}",
         "Hiring Cloud": f"https://hiringcloud.in/jobs?query={keywords.replace(' ', '%20')}"
     }
+
+def save_progress(user_id, practice_states):
+    if user_id:
+        db.collection("practice_progress").document(user_id).set({"states": practice_states})
+        st.success("Practice progress saved successfully.")
+    else:
+        st.warning("User ID not found. Please login.")
+
+def load_progress(user_id):
+    if user_id:
+        doc = db.collection("practice_progress").document(user_id).get()
+        if doc.exists:
+            return doc.to_dict().get("states", {})
+        else:
+            return None
+    else:
+        st.warning("User ID not found. Please login.")
+        return None
 
 st.header("AI-Powered Career Advisor with Referrals")
 with st.sidebar:
@@ -205,25 +229,41 @@ with tabs[0]:
         st.info("No career suggestions available.")
 
 with tabs[1]:
-    st.header("### Career Roadmap")
-    render_graphviz_roadmap(roadmap)
-with tabs[2]:
-    st.header("### Skill Gap Analysis & Practice Plan")
-    practice_text = sections.get("skill_gap", "No practice plan found.")
-    display_practice_checklist(practice_text)
+    st.header("Career Roadmap")
+    roadmap_text = sections.get("roadmap", "").strip()
+    if roadmap_text:
+        render_graphviz_roadmap(roadmap_text)
+    else:
+        st.info("No roadmap data available.")
 
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button("Save Practice Progress"):
-            save_progress(user_id, st.session_state.practice_states)
-    with col2:
-        if st.button("Load Practice Progress"):
-            loaded = load_progress(user_id)
-            if loaded:
-                st.session_state.practice_states = loaded
-                st.experimental_rerun()
-            else:
-                st.warning("No saved progress found.")
+with tabs[2]:
+    st.header("Skill Gap Analysis & Practice Plan")
+    skill_gap_text = sections.get("skill_gap", "").strip()
+    if skill_gap_text:
+        checklist_items = get_checklist_items(skill_gap_text)
+        if checklist_items:
+            st.write("Practice Plan Checklist:")
+            checklist_with_persistence(checklist_items)
+        extra_options = skill_gap_text.split("\n")
+        extras = [line for line in extra_options if not line.strip().startswith("- ")]
+        if extras:
+            st.markdown("\n".join(extras))
+        else:
+            st.markdown(skill_gap_text)
+        col1, col2 = st.columns(2)
+        with col1:
+            if st.button("Save Practice Progress"):
+                save_progress(user_id, st.session_state.practice_states)
+        with col2:
+            if st.button("Load Practice Progress"):
+                loaded = load_progress(user_id)
+                if loaded:
+                    st.session_state.practice_states = loaded
+                    st.experimental_rerun()
+                else:
+                    st.warning("No saved progress found.")
+    else:
+        st.info("No skill gap analysis available.")
 
 with tabs[3]:
     st.header("Learning Resources")
