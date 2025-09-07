@@ -63,7 +63,7 @@ def get_ai_response(prompt):
     if response.status_code == 200:
         resp = response.json()
         try:
-            return resp["candidates"]["content"]["parts"]["text"]
+            return resp["candidates"][0]["content"]["parts"][0]["text"]
         except Exception as e:
             return f"Could not parse AI response: {e}"
     else:
@@ -89,7 +89,6 @@ def split_sections(text):
 
 def extract_json_block(text):
     text = text.strip()
-    # Remove 'json' prefix if present
     if text.startswith("json"):
         text = text[len("json"):].strip()
     return text
@@ -106,17 +105,15 @@ def render_graphviz_roadmap(roadmap_json):
             return
         dot = graphviz.Digraph(node_attr={'style': 'filled', 'fillcolor': '#ade8f4', 'fontname': 'Segoe UI'})
         dot.attr(rankdir='LR', size='8,5')
-        # Add nodes and labels
         for step in data:
             num = str(step.get("step_number", "?"))
             label = f"{step.get('title', '')}\n({step.get('expected_duration_weeks', '?')} weeks)"
             dot.node(num, label)
-        # Add edges
         for i in range(len(data)-1):
             from_node = str(data[i].get("step_number", "?"))
             to_node = str(data[i+1].get("step_number", "?"))
             dot.edge(from_node, to_node)
-        st.graphviz_chart(dot)  # This renders the chart
+        st.graphviz_chart(dot)
     except Exception as e:
         st.error(f"Could not draw roadmap: {e}")
         st.text_area("Raw roadmap data (please verify format):", roadmap_json, height=200)
@@ -201,38 +198,58 @@ tabs = st.tabs(["Career Suggestions", "Roadmap", "Skill Gap Analysis", "Learning
 
 with tabs[0]:
     st.header("Career Suggestions")
-    render_career_suggestions(sections["career"].strip())
+    career_text = sections.get("career", "").strip()
+    if career_text:
+        render_career_suggestions(career_text)
+    else:
+        st.info("No career suggestions available.")
 
 with tabs[1]:
     st.header("Roadmap")
-    render_graphviz_roadmap(sections["roadmap"])
+    roadmap_text = sections.get("roadmap", "").strip()
+    if roadmap_text:
+        render_graphviz_roadmap(roadmap_text)
+    else:
+        st.info("No roadmap data available.")
 
 with tabs[2]:
     st.header("Skill Gap Analysis & Practice Plan")
-    checklist_items = get_checklist_items(sections["skill_gap"])
-    if checklist_items:
-        st.write("Practice Plan Checklist:")
-        checklist_with_persistence(checklist_items)
-    extra_options = sections["skill_gap"].split("\n")
-    extras = [line for line in extra_options if not line.strip().startswith("- ")]
-    if extras:
-        st.markdown("\n".join(extras))
+    skill_gap_text = sections.get("skill_gap", "").strip()
+    if skill_gap_text:
+        checklist_items = get_checklist_items(skill_gap_text)
+        if checklist_items:
+            st.write("Practice Plan Checklist:")
+            checklist_with_persistence(checklist_items)
+        extra_options = skill_gap_text.split("\n")
+        extras = [line for line in extra_options if not line.strip().startswith("- ")]
+        if extras:
+            st.markdown("\n".join(extras))
+        else:
+            st.markdown(skill_gap_text)
     else:
-        st.markdown(sections["skill_gap"].strip())
+        st.info("No skill gap analysis available.")
 
 with tabs[3]:
     st.header("Learning Resources")
-    if sections["learning"].strip():
-        render_learning_resources(sections["learning"])
+    learning_text = sections.get("learning", "").strip()
+    if learning_text:
+        render_learning_resources(learning_text)
     else:
-        st.info("No learning resources found.")
+        st.info("No learning resources provided.")
 
 with tabs[4]:
     st.header("Practice Websites")
-    st.markdown(sections["practice_websites"], unsafe_allow_html=True)
+    practice_websites_text = sections.get("practice_websites", "").strip()
+    if practice_websites_text:
+        st.markdown(practice_websites_text, unsafe_allow_html=True)
+    else:
+        st.info("No practice websites listed.")
 
 with tabs[5]:
     st.header("Job Search Platforms")
-    job_links = get_job_platform_links(skills_text, location)
-    for platform, url in job_links.items():
-        st.markdown(f"- [{platform}]({url})", unsafe_allow_html=True)
+    if skills and location:
+        job_links = get_job_platform_links(", ".join([f"{s} (level {l})" for s, l in skills.items()]), location)
+        for platform, url in job_links.items():
+            st.markdown(f"- [{platform}]({url})", unsafe_allow_html=True)
+    else:
+        st.info("Enter skills and location to view job search platforms.")
