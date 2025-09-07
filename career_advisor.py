@@ -2,9 +2,8 @@
 import streamlit as st
 import os
 from dotenv import load_dotenv
-from graphviz import Digraph
 import openai
-import json
+from graphviz import Digraph
 
 # -------------------- Load .env --------------------
 load_dotenv()
@@ -25,7 +24,6 @@ body { background: linear-gradient(135deg, #f0f4f8, #d9e2ec); font-family: 'Sego
 .stTabs [role="tab"] { font-weight: 600; font-size: 15px; }
 .stTabs [role="tabpanel"] { background: rgba(255,255,255,0.95); border-radius: 12px; padding: 20px; margin-top: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
 .badge { display: inline-block; background-color: #4a90e2; color: white; padding: 4px 10px; margin: 2px 2px 2px 0; border-radius: 12px; font-size: 14px; }
-.badge.completed { background-color: #50e3c2 !important; }
 .link-badge { display: inline-block; background-color: #f0f0f0; color: #333; padding: 4px 10px; margin: 2px 2px 2px 0; border-radius: 12px; font-size: 14px; text-decoration: none; }
 </style>
 """, unsafe_allow_html=True)
@@ -46,7 +44,19 @@ def roadmap_with_checkboxes(items):
     for item in items:
         st.checkbox(item)
 
+def generate_graphviz_roadmap(steps):
+    """Enhanced roadmap with colored nodes and arrows."""
+    dot = Digraph(comment="Career Roadmap", format='png')
+    colors = ["#4a90e2", "#50e3c2", "#f5a623", "#9013fe", "#d0021b", "#7ed321"]
+    for i, step in enumerate(steps):
+        color = colors[i % len(colors)]
+        dot.node(str(i), step, style="filled", fillcolor=color, fontcolor="white", shape="box", fontsize="14")
+        if i > 0:
+            dot.edge(str(i-1), str(i), color="#333333", arrowsize="1.0")
+    return dot
+
 def generate_gemini_response(prompt):
+    """Call Gemini API and split response into sections."""
     try:
         response = openai.ChatCompletion.create(
             model="gemini-pro",
@@ -54,29 +64,43 @@ def generate_gemini_response(prompt):
             temperature=0.7
         )
         text = response.choices[0].message['content'].strip()
-        # Try parsing JSON, fallback to plain text
-        try:
-            return json.loads(text)
-        except:
-            return {
-                "career": text,
-                "roadmap": text,
-                "skill_gap": text,
-                "learning": text,
-                "practice_websites": text,
-                "job_platforms": text
-            }
+        # Default empty sections
+        sections = {
+            "career": "",
+            "roadmap": "",
+            "skill_gap": "",
+            "learning": "",
+            "practice_websites": "",
+            "job_platforms": ""
+        }
+        # Keywords to split sections
+        keys = {
+            "career": ["Career Suggestions", "Career:"],
+            "roadmap": ["Roadmap", "Career Roadmap"],
+            "skill_gap": ["Skill Gap", "Skills Gap"],
+            "learning": ["Learning Resources", "Learning:"],
+            "practice_websites": ["Practice Websites", "Practice:"],
+            "job_platforms": ["Job Platforms", "Job Search:"]
+        }
+        for key, kw_list in keys.items():
+            for kw in kw_list:
+                if kw.lower() in text.lower():
+                    idx = text.lower().find(kw.lower())
+                    next_idx = len(text)
+                    # find next keyword to slice
+                    for other_kw in sum([v for k,v in keys.items() if k != key], []):
+                        if other_kw.lower() in text.lower():
+                            tmp = text.lower().find(other_kw.lower())
+                            if tmp > idx:
+                                next_idx = min(next_idx, tmp)
+                    sections[key] = text[idx:next_idx].strip()
+                    break
+        if not any(sections.values()):
+            sections["career"] = text
+        return sections
     except Exception as e:
         st.error(f"Error fetching Gemini response: {e}")
         return {}
-
-def generate_graphviz_roadmap(steps):
-    dot = Digraph(comment="Career Roadmap")
-    for i, step in enumerate(steps):
-        dot.node(str(i), step)
-        if i > 0:
-            dot.edge(str(i-1), str(i))
-    return dot
 
 # -------------------- Login Page --------------------
 if not st.session_state.logged_in:
@@ -88,7 +112,7 @@ if not st.session_state.logged_in:
         if username.strip() and email.strip():
             st.session_state.logged_in = True
             st.session_state.username = username
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.warning("Please fill in all fields")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -104,7 +128,6 @@ else:
         with st.form("user_input_form"):
             age = st.number_input("Age", min_value=12, max_value=100, step=1)
             experience = st.number_input("Years of Experience", min_value=0, max_value=50, step=1)
-            
             st.write("### Skills and Proficiency")
             skill_1 = st.text_input("Skill 1 Name")
             prof_1 = st.selectbox("Skill 1 Level", ["Beginner", "Intermediate", "Expert"])
@@ -112,13 +135,11 @@ else:
             prof_2 = st.selectbox("Skill 2 Level", ["Beginner", "Intermediate", "Expert"])
             skill_3 = st.text_input("Skill 3 Name")
             prof_3 = st.selectbox("Skill 3 Level", ["Beginner", "Intermediate", "Expert"])
-            
             target_role = st.text_input("Target Role / Career Goal")
             education = st.text_input("Education Background")
             location = st.text_input("Preferred Job Location")
-            
             submitted = st.form_submit_button("Get Career Advice")
-            
+
             if submitted:
                 if all([target_role.strip(), education.strip(), location.strip()]):
                     st.session_state.age = age
@@ -129,21 +150,19 @@ else:
                     st.session_state.skills_input = f"{skill_1} ({prof_1}), {skill_2} ({prof_2}), {skill_3} ({prof_3})"
                     st.session_state.form_submitted = True
 
-                    # -------------------- Generate Sections from Gemini --------------------
                     prompt = f"""
-Provide detailed career advice based on:
+Provide career advice for a user with labeled sections:
+Career Suggestions, Roadmap, Skill Gap, Learning Resources, Practice Websites, Job Search Platforms.
+User Info:
 - Age: {age}
 - Experience: {experience} years
 - Skills: {st.session_state.skills_input}
 - Target Role: {target_role}
 - Education: {education}
 - Location: {location}
-
-Return output as strict JSON with keys: career, roadmap, skill_gap, learning, practice_websites, job_platforms
-If a key cannot be filled, return empty string for it.
 """
                     st.session_state.sections = generate_gemini_response(prompt)
-                    st.rerun()
+                    st.experimental_rerun()
 
     # -------------------- Tabs --------------------
     if st.session_state.form_submitted:
@@ -159,9 +178,9 @@ If a key cannot be filled, return empty string for it.
             st.header("Career Roadmap")
             roadmap_text = sections.get("roadmap", "")
             if roadmap_text:
-                roadmap_steps = [s.strip() for s in roadmap_text.split(",")]
-                roadmap_with_checkboxes(roadmap_steps)
-                st.graphviz_chart(generate_graphviz_roadmap(roadmap_steps))
+                steps = [s.strip() for s in roadmap_text.replace("\n",",").split(",") if s.strip()]
+                roadmap_with_checkboxes(steps)
+                st.graphviz_chart(generate_graphviz_roadmap(steps))
             else:
                 st.info("No roadmap data available.")
 
@@ -179,16 +198,16 @@ If a key cannot be filled, return empty string for it.
 
         with tabs[4]:
             st.header("Practice Websites")
-            practice_websites_text = sections.get("practice_websites", "")
-            if practice_websites_text:
-                render_badges([l.strip() for l in practice_websites_text.split(",")], badge_class="link-badge")
+            practice_text = sections.get("practice_websites", "")
+            if practice_text:
+                render_badges([l.strip() for l in practice_text.split(",")], badge_class="link-badge")
             else:
                 st.info("No practice websites listed.")
 
         with tabs[5]:
             st.header("Job Search Platforms")
-            job_platforms_text = sections.get("job_platforms", "")
-            if job_platforms_text:
-                render_badges([l.strip() for l in job_platforms_text.split(",")], badge_class="link-badge")
+            jobs_text = sections.get("job_platforms", "")
+            if jobs_text:
+                render_badges([l.strip() for l in jobs_text.split(",")], badge_class="link-badge")
             else:
                 st.info("No job search platforms listed.")
