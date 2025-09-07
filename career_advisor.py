@@ -3,12 +3,13 @@ import streamlit as st
 import os
 from dotenv import load_dotenv
 from graphviz import Digraph
-from openai import OpenAI
+import openai
 import json
 
 # -------------------- Load .env --------------------
 load_dotenv()
 API_KEY = os.getenv("REACT_APP_GEMINI_API_KEY")
+openai.api_key = API_KEY
 
 # -------------------- CSS Styling --------------------
 st.markdown("""
@@ -127,13 +128,12 @@ def checklist_with_persistence(items):
         st.session_state.practice_states[key] = st.checkbox(item, value=checked)
 
 def generate_gemini_response(prompt):
-    client = OpenAI(api_key=API_KEY)
-    response = client.chat.completions.create(
+    response = openai.ChatCompletion.create(
         model="gemini-pro",
         messages=[{"role": "user", "content": prompt}],
         temperature=0.7
     )
-    return response.choices[0].message.content
+    return response.choices[0].message['content']
 
 def generate_graphviz_roadmap(steps):
     dot = Digraph(comment="Career Roadmap")
@@ -164,6 +164,7 @@ else:
     st.title(f"Welcome {st.session_state.username} 👋")
     st.write("Fill in your details to get personalized career advice.")
 
+    # -------------------- Input Form --------------------
     if not st.session_state.form_submitted:
         with st.form("user_input_form"):
             age = st.number_input("Age", min_value=12, max_value=100, step=1)
@@ -228,10 +229,7 @@ else:
         with tabs[0]:  # Career Suggestions
             st.header("Career Suggestions")
             career_text = sections.get("career", "")
-            if career_text:
-                st.markdown(career_text)
-            else:
-                st.info("No career suggestions available.")
+            st.markdown(career_text if career_text else "No career suggestions available.")
 
         with tabs[1]:  # Roadmap
             st.header("Career Roadmap")
