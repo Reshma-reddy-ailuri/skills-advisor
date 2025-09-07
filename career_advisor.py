@@ -5,7 +5,7 @@ from firebase_admin import credentials, firestore
 import requests
 import os
 from dotenv import load_dotenv
-import graphviz  # Added import
+import graphviz
 
 # Load API keys and Firebase credentials
 load_dotenv()
@@ -122,7 +122,6 @@ def get_checklist_items(practice_text):
     return [line[2:].strip() for line in practice_text.split('\n') if line.strip().startswith("- ")]
 
 def checklist_with_persistence(items):
-    # Initialize persist states if not present
     if "practice_states" not in st.session_state:
         st.session_state.practice_states = {}
     for i, item in enumerate(items):
@@ -161,22 +160,18 @@ def get_job_platform_links(keywords, location):
     }
 
 def save_progress(user_id, practice_states):
-    if user_id:
+    if user_id and practice_states:
         db.collection("practice_progress").document(user_id).set({"states": practice_states})
         st.success("Practice progress saved successfully.")
     else:
-        st.warning("User ID not found. Please login.")
+        st.warning("No progress to save.")
 
 def load_progress(user_id):
     if user_id:
         doc = db.collection("practice_progress").document(user_id).get()
         if doc.exists:
             return doc.to_dict().get("states", {})
-        else:
-            return None
-    else:
-        st.warning("User ID not found. Please login.")
-        return None
+    return None
 
 st.header("AI-Powered Career Advisor with Referrals")
 with st.sidebar:
@@ -218,6 +213,9 @@ No extra text outside these sections.
 ai_response = get_ai_response(prompt)
 sections = split_sections(ai_response)
 
+# Debug to see raw roadmap if issues
+st.text_area("Raw roadmap data (please verify format):", sections.get("roadmap", ""), height=200)
+
 tabs = st.tabs(["Career Suggestions", "Roadmap", "Skill Gap Analysis", "Learning Resources", "Practice Websites", "Job Search Platforms"])
 
 with tabs[0]:
@@ -244,10 +242,6 @@ with tabs[2]:
         if checklist_items:
             st.write("Practice Plan Checklist:")
             checklist_with_persistence(checklist_items)
-        extra_options = skill_gap_text.split("\n")
-        extras = [line for line in extra_options if not line.strip().startswith("- ")]
-        if extras:
-            st.markdown("\n".join(extras))
         else:
             st.markdown(skill_gap_text)
         col1, col2 = st.columns(2)
@@ -256,9 +250,9 @@ with tabs[2]:
                 save_progress(user_id, st.session_state.practice_states)
         with col2:
             if st.button("Load Practice Progress"):
-                loaded = load_progress(user_id)
-                if loaded:
-                    st.session_state.practice_states = loaded
+                loaded_states = load_progress(user_id)
+                if loaded_states:
+                    st.session_state.practice_states = loaded_states
                     st.experimental_rerun()
                 else:
                     st.warning("No saved progress found.")
