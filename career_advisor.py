@@ -167,7 +167,7 @@ def render_checklist(checklist_text):
 
 def render_graphviz_roadmap(roadmap_steps):
     dot = Digraph(comment="Career Roadmap", format="png")
-    dot.attr(rankdir='LR', size='8')
+    dot.attr(rankdir='TB', size='8')
     for i, step in enumerate(roadmap_steps):
         dot.node(str(i), step)
     for i in range(len(roadmap_steps)-1):
