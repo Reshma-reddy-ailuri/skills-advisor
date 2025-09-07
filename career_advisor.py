@@ -169,7 +169,7 @@ if not st.session_state.logged_in:
         if username and email:
             st.session_state.logged_in = True
             st.session_state.username = username
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.warning("Please fill in all fields")
 
@@ -201,7 +201,7 @@ else:
                     st.session_state.target_role = target_role
                     st.session_state.location = location
                     st.session_state.form_submitted = True
-                    st.experimental_rerun()
+                    st.rerun()
                 else:
                     st.warning("Please fill in all fields to continue.")
 
