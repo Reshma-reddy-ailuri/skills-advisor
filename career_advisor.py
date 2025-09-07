@@ -203,13 +203,28 @@ I am a {age}-year-old student from {location}, India. My education background: {
 Please provide the output in the following exact sections:
 ===Career Suggestions=== Provide exactly 3 career suggestions, each as a bullet point like:
 Career Name: brief explanation.
-===Roadmap=== Provide ONLY a valid JSON array (no extra text) for the roadmap steps as below:
-[ {{ "step_number": 1, "title": "Step title", "description": "Step description", "expected_duration_weeks": 4 }}, ... ]
-===Skill Gap Analysis & Practice Plan=== List skills to develop and provide a bullet point practice plan.
-===Learning Resources=== List relevant courses, books, or tutorials as bullet points.
-===Practice Websites=== List practice websites with markdown links like [site](https://www.notion.so/url).
-No extra text outside these sections.
-"""
+===Roadmap===
+[
+  {
+    "step_number": 1,
+    "title": "Foundational Math & Statistics",
+    "description": "Strengthen linear algebra, calculus, probability, and statistics.",
+    "expected_duration_weeks": 8
+  },
+  {
+    "step_number": 2,
+    "title": "Python Programming for Data Science",
+    "description": "Master NumPy, Pandas, Matplotlib, Seaborn, and Scikit-learn.",
+    "expected_duration_weeks": 12
+  },
+  ...
+  {
+    "step_number": 7,
+    "title": "Job Search & Networking",
+    "description": "Prepare resume, portfolio, and network with professionals.",
+    "expected_duration_weeks": 8
+  }
+]
 ai_response = get_ai_response(prompt)
 sections = split_sections(ai_response)
 
