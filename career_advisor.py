@@ -1,35 +1,82 @@
 import streamlit as st
 from graphviz import Digraph
 
-# -------------------- CSS Styling --------------------
+# -------------------- CSS Styling with Background Image --------------------
 st.markdown("""
     <style>
-    body { background: #f5f7fa; font-family: Arial, sans-serif; }
+    /* Full background image */
+    body {
+        background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1350&q=80') no-repeat center center fixed;
+        background-size: cover;
+        font-family: Arial, sans-serif;
+    }
+
+    /* Overlay for readability */
+    .stApp {
+        background-color: rgba(245, 247, 250, 0.95);
+        padding: 20px;
+        border-radius: 12px;
+        margin: 10px;
+    }
+
+    /* Login card */
     .login-card {
-        background: white;
+        background: rgba(255, 255, 255, 0.95);
         max-width: 500px;
         margin: 80px auto;
         padding: 30px;
         border-radius: 12px;
-        box-shadow: 0px 4px 12px rgba(0,0,0,0.1);
+        box-shadow: 0px 8px 20px rgba(0,0,0,0.15);
     }
-    .login-card h2 { text-align: center; margin-bottom: 20px; font-size: 24px; color: #333; }
-    .stTextInput>div>div>input, .stNumberInput>div>div>input {
-        border-radius: 8px; border: 1px solid #ccc; padding: 10px; font-size: 15px;
+
+    .login-card h2 {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 24px;
+        color: #333;
     }
+
+    /* Inputs */
+    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div {
+        border-radius: 8px; 
+        border: 1px solid #ccc; 
+        padding: 10px; 
+        font-size: 15px; 
+        background-color: #f9f9f9;
+    }
+
+    /* Buttons */
     .stButton>button {
-        width: 100%; padding: 10px; border-radius: 8px; background: #4CAF50;
-        color: white; font-size: 16px; border: none;
+        width: 100%; 
+        padding: 10px; 
+        border-radius: 8px; 
+        background: #4CAF50;
+        color: white; 
+        font-size: 16px; 
+        border: none;
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
     .stButton>button:hover { background: #45a049; }
+
+    /* Profile icon */
     .profile-icon {
-        position: fixed; top: 15px; right: 25px; font-size: 18px; background: #ddd;
+        position: fixed; top: 15px; right: 25px; font-size: 18px; background: #4CAF50;
         width: 40px; height: 40px; border-radius: 50%; text-align: center;
-        line-height: 40px; font-weight: bold; color: #333; z-index: 9999;
+        line-height: 40px; font-weight: bold; color: white; z-index: 9999;
     }
+
+    /* Tabs content */
+    .stTabs [role="tab"] {
+        font-weight: bold;
+        font-size: 16px;
+    }
+
+    /* Badge styles */
     .badge { display: inline-block; padding: 6px 12px; margin: 3px; background-color: #e0f0ff; border-radius: 8px; color: #007acc; font-size: 14px; }
     .link-badge { display: inline-block; padding: 6px 12px; margin: 3px; background-color: #f0f0f0; border-radius: 8px; color: #0645AD; text-decoration: none; font-size: 14px; }
-    .role-section { margin-bottom: 15px; padding: 10px; background-color: #f8f9fa; border-left: 4px solid #4CAF50; border-radius: 6px; }
+
+    /* Role sections */
+    .role-section { margin-bottom: 15px; padding: 15px; background-color: #ffffffdd; border-left: 4px solid #4CAF50; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);}
     </style>
 """, unsafe_allow_html=True)
 
@@ -41,7 +88,7 @@ if "show_results" not in st.session_state:
 if "checklist_states" not in st.session_state:
     st.session_state.checklist_states = {}
 
-# -------------------- Mock Data Function --------------------
+# -------------------- Mock Data Functions & Helpers --------------------
 def generate_mock_career_advice(user_data):
     return {
         "career": {
@@ -91,7 +138,6 @@ def generate_mock_career_advice(user_data):
         ]
     }
 
-# -------------------- Helper Functions --------------------
 def render_badges(items, badge_class="badge", clickable=False):
     for item in items:
         if clickable and isinstance(item, tuple):
@@ -136,7 +182,7 @@ if not st.session_state.logged_in:
         if username and email:
             st.session_state.logged_in = True
             st.session_state.username = username
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.error("Please fill in all fields")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -147,7 +193,7 @@ else:
     st.title(f"Welcome {st.session_state.username} 👋")
     st.write("Explore your personalized career advisor dashboard.")
 
-    # -------------------- Input Page --------------------
+    # -------------------- Input Form --------------------
     if not st.session_state.show_results:
         st.header("Enter Your Profile Details")
         with st.form("user_input_form"):
@@ -163,7 +209,6 @@ else:
             skill_3 = st.text_input("Skill 3")
             skill_3_level = st.selectbox("Skill 3 Proficiency", ["Beginner", "Intermediate", "Advanced"])
             submit_btn = st.form_submit_button("Get Career Advice")
-
         if submit_btn:
             st.session_state.user_data = {
                 "age": age,
@@ -174,12 +219,13 @@ else:
                 "skills": f"{skill_1} ({skill_1_level}), {skill_2} ({skill_2_level}), {skill_3} ({skill_3_level})"
             }
             st.session_state.show_results = True
-            st.rerun()
+            st.experimental_rerun()
 
-    # -------------------- Results Page --------------------
+    # -------------------- Results Tabs --------------------
     else:
         user_data = st.session_state.user_data
         sections = generate_mock_career_advice(user_data)
+
         st.header("AI-Powered Career Advisor Results")
 
         tabs = st.tabs([
@@ -191,44 +237,32 @@ else:
             "Job Search Platforms"
         ])
 
-        # Career Suggestions
         with tabs[0]:
             st.header("Career Suggestions")
             render_career_suggestions(sections["career"])
 
-        # Roadmap
         with tabs[1]:
             st.header("Career Roadmap")
             render_graphviz_roadmap(sections["roadmap"])
 
-        # Skill Gap Analysis
         with tabs[2]:
             st.header("Skill Gap Analysis & Practice Plan")
-            skill_gap_text = sections["skill_gap"]
-            if "Practice Plan Checklist:" in skill_gap_text:
-                skills_part, checklist_part = skill_gap_text.split("Practice Plan Checklist:", 1)
-            else:
-                skills_part, checklist_part = skill_gap_text, ""
-            if skills_part.strip():
-                st.markdown(skills_part)
-            render_checklist("Practice Plan Checklist:" + checklist_part)
+            st.markdown(sections["skill_gap"])
+            render_checklist(sections["skill_gap"])
 
-        # Learning Resources
         with tabs[3]:
             st.header("Learning Resources")
-            render_badges(sections["learning"], clickable=True)
+            render_badges(sections["learning"], badge_class="link-badge", clickable=True)
 
-        # Practice Websites
         with tabs[4]:
             st.header("Practice Websites")
             render_badges(sections["practice_websites"], badge_class="link-badge", clickable=True)
 
-        # Job Search Platforms
         with tabs[5]:
             st.header("Job Search Platforms")
             render_badges(sections["job_platforms"], badge_class="link-badge", clickable=True)
 
-        # Back Button
-        if st.button("⬅ Back to Input Form"):
+        # Option to go back and edit
+        if st.button("Edit Profile Details"):
             st.session_state.show_results = False
-            st.rerun()
+            st.experimental_rerun()
