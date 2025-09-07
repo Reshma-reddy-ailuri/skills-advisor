@@ -4,82 +4,78 @@ from graphviz import Digraph
 # -------------------- CSS Styling with Background Image --------------------
 st.markdown("""
     <style>
-    /* Full background image */
+    /* Neutral main app background */
     body {
-        background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1350&q=80') no-repeat center center fixed;
-        background-size: cover;
+        background: #f5f7fa;
         font-family: Arial, sans-serif;
     }
 
-    /* Overlay for readability */
-    .stApp {
-        background-color: rgba(245, 247, 250, 0.95);
-        padding: 20px;
-        border-radius: 12px;
-        margin: 10px;
-    }
-
-    /* Login card */
-    .login-card {
-        background: rgba(255, 255, 255, 0.95);
-        max-width: 500px;
-        margin: 80px auto;
+    /* Card style for login, input, and result sections */
+    .card {
+        background-color: rgba(255, 255, 255, 0.95);
         padding: 30px;
+        margin: 30px auto;
         border-radius: 12px;
-        box-shadow: 0px 8px 20px rgba(0,0,0,0.15);
+        box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+        max-width: 800px;
     }
 
-    .login-card h2 {
-        text-align: center;
-        margin-bottom: 20px;
-        font-size: 24px;
+    /* Section headers */
+    .card h2, .card h3 {
         color: #333;
     }
 
-    /* Inputs */
-    .stTextInput>div>div>input, .stNumberInput>div>div>input, .stSelectbox>div>div>div {
-        border-radius: 8px; 
-        border: 1px solid #ccc; 
-        padding: 10px; 
-        font-size: 15px; 
+    /* Inputs inside cards */
+    .card .stTextInput>div>div>input, .card .stNumberInput>div>div>input, .card .stSelectbox>div>div>div {
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        padding: 10px;
+        font-size: 15px;
         background-color: #f9f9f9;
     }
 
     /* Buttons */
-    .stButton>button {
-        width: 100%; 
-        padding: 10px; 
-        border-radius: 8px; 
+    .card .stButton>button {
+        width: 100%;
+        padding: 10px;
+        border-radius: 8px;
         background: #4CAF50;
-        color: white; 
-        font-size: 16px; 
+        color: white;
+        font-size: 16px;
         border: none;
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
     }
-    .stButton>button:hover { background: #45a049; }
+    .card .stButton>button:hover { background: #45a049; }
 
-    /* Profile icon */
-    .profile-icon {
-        position: fixed; top: 15px; right: 25px; font-size: 18px; background: #4CAF50;
-        width: 40px; height: 40px; border-radius: 50%; text-align: center;
-        line-height: 40px; font-weight: bold; color: white; z-index: 9999;
-    }
-
-    /* Tabs content */
+    /* Tabs */
     .stTabs [role="tab"] {
         font-weight: bold;
         font-size: 16px;
+        color: #333;
     }
 
-    /* Badge styles */
-    .badge { display: inline-block; padding: 6px 12px; margin: 3px; background-color: #e0f0ff; border-radius: 8px; color: #007acc; font-size: 14px; }
-    .link-badge { display: inline-block; padding: 6px 12px; margin: 3px; background-color: #f0f0f0; border-radius: 8px; color: #0645AD; text-decoration: none; font-size: 14px; }
+    /* Badge for links */
+    .badge, .link-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        margin: 3px;
+        border-radius: 8px;
+        font-size: 14px;
+    }
+
+    .badge { background-color: #e0f0ff; color: #007acc; }
+    .link-badge { background-color: #f0f0f0; color: #0645AD; text-decoration: none; }
 
     /* Role sections */
-    .role-section { margin-bottom: 15px; padding: 15px; background-color: #ffffffdd; border-left: 4px solid #4CAF50; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.08);}
+    .role-section { 
+        margin-bottom: 15px; 
+        padding: 15px; 
+        background-color: #ffffffdd; 
+        border-left: 4px solid #4CAF50; 
+        border-radius: 8px; 
+        box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+    }
     </style>
 """, unsafe_allow_html=True)
-
 # -------------------- Session State --------------------
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
