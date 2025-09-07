@@ -7,9 +7,10 @@ import os
 from dotenv import load_dotenv
 import graphviz
 
-# Load API keys and Firebase credentials
+# ------------------- LOAD API KEYS -------------------
 load_dotenv()
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY") or st.secrets.get("GEMINI_API_KEY")
+
 firebase_creds_str = st.secrets["FIREBASE_SERVICE_ACCOUNT"]
 firebase_creds_dict = json.loads(firebase_creds_str)
 
@@ -18,46 +19,108 @@ if not firebase_admin._apps:
     firebase_admin.initialize_app(cred)
 db = firestore.client()
 
+# ------------------- LOGIN PAGE -------------------
+def login_page():
+    st.markdown(
+        """
+        <style>
+        .login-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            height: 90vh;
+            text-align: center;
+        }
+        .login-box {
+            background-color: #ffffff;
+            padding: 40px 50px;
+            border-radius: 20px;
+            box-shadow: 0px 4px 12px rgba(0,0,0,0.1);
+            max-width: 400px;
+            width: 100%;
+        }
+        .login-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #4db6ac;
+            margin-bottom: 20px;
+        }
+        </style>
+        """,
+        unsafe_allow_html=True,
+    )
 
-def sidebar_login():
-    st.sidebar.header("User Login")
-    if "user_email" not in st.session_state:
-        st.session_state.user_email = ""
-    email = st.sidebar.text_input("Enter your email", value=st.session_state.user_email)
-    login_button = st.sidebar.button("Login")
-    logout_button = st.sidebar.button("Logout")
+    st.markdown('<div class="login-container"><div class="login-box">', unsafe_allow_html=True)
+    st.markdown('<div class="login-title">🔐 User Login</div>', unsafe_allow_html=True)
+
+    email = st.text_input("Enter your email", value="")
+    login_button = st.button("Login")
+
+    st.markdown("</div></div>", unsafe_allow_html=True)
+
     if login_button and email:
         st.session_state.user_email = email
-        st.sidebar.success(f"Logged in as {email}")
-    if logout_button:
-        st.session_state.user_email = ""
+        st.success(f"✅ Logged in as {email}")
+        st.experimental_rerun()
 
 
-sidebar_login()
-if not st.session_state.user_email:
-    st.info("Please login using the sidebar to continue.")
-    st.stop()
-user_id = st.session_state.user_email
-if "practice_states" not in st.session_state:
-    st.session_state.practice_states = {}
-
-
+# ------------------- GLOBAL THEME -------------------
 st.markdown(
     """
     <style>
-    [data-testid="stSidebar"] { background-color: #f3e5f5; color: #37474f; padding: 24px 20px 40px 20px !important; font-weight: 600; min-width: 320px !important; border: none !important; }
-    .block-container { background-color: #f9fdfa; padding: 32px 48px 48px 48px !important; max-width: 900px; margin: auto; font-size: 1.1rem; color: #37474f; }
-    h2, h3 { color: #4db6ac; padding-bottom: 8px; }
-    ul { padding-left: 1.5rem; }
-    li { margin-bottom: 12px; }
+    /* Global App Styling */
+    .block-container {
+        background-color: #f9fdfa;
+        padding: 32px 48px 48px 48px !important;
+        max-width: 950px;
+        margin: auto;
+        font-size: 1.1rem;
+        color: #37474f;
+    }
+    h1, h2, h3 {
+        color: #4db6ac;
+        font-weight: 600;
+    }
+    .stButton>button {
+        background-color: #4db6ac;
+        color: white;
+        border-radius: 8px;
+        padding: 0.6em 1.2em;
+        font-size: 1rem;
+        font-weight: 500;
+        border: none;
+        transition: all 0.2s ease-in-out;
+    }
+    .stButton>button:hover {
+        background-color: #009688;
+        transform: scale(1.03);
+    }
+    .stTextInput>div>div>input {
+        border-radius: 8px;
+        border: 1px solid #ccc;
+        padding: 0.5em;
+    }
+    .stTabs [data-baseweb="tab-list"] {
+        gap: 12px;
+    }
+    .stTabs [data-baseweb="tab"] {
+        padding: 10px 20px;
+        border-radius: 10px 10px 0px 0px;
+        background-color: #e0f7fa;
+        font-weight: 500;
+        color: #37474f;
+    }
+    .stTabs [aria-selected="true"] {
+        background-color: #4db6ac !important;
+        color: white !important;
+    }
     </style>
     """,
     unsafe_allow_html=True,
 )
 
-# --- FUNCTION DEFINITIONS ---
-
-
+# ------------------- HELPER FUNCTIONS -------------------
 def get_ai_response(prompt):
     url = f"https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_API_KEY}"
     headers = {"Content-Type": "application/json"}
@@ -112,18 +175,22 @@ def render_graphviz_roadmap(roadmap_json):
         if not data:
             st.info("Roadmap JSON is empty.")
             return
+
         dot = graphviz.Digraph(
             node_attr={"style": "filled", "fillcolor": "#ade8f4", "fontname": "Segoe UI"}
         )
-        dot.attr(rankdir="TB", size="8,5")  # Vertical layout for better readability
+        dot.attr(rankdir="TB", size="8,5")
+
         for step in data:
             num = str(step.get("step_number", "?"))
             label = f"{step.get('title', '')}\n({step.get('expected_duration_weeks', '?')} weeks)"
             dot.node(num, label)
+
         for i in range(len(data) - 1):
             from_node = str(data[i].get("step_number", "?"))
             to_node = str(data[i + 1].get("step_number", "?"))
             dot.edge(from_node, to_node)
+
         st.graphviz_chart(dot)
     except Exception as e:
         st.error(f"Could not draw roadmap: {e}")
@@ -196,116 +263,83 @@ def load_progress(user_id):
     return None
 
 
-# --- SIDEBAR INPUTS ---
-with st.sidebar:
-    st.header("Profile Information")
-    age = st.number_input("Age", 10, 60)
-    location = st.text_input("City or State")
-    education = st.text_input("Education Background")
+# ------------------- MAIN FLOW -------------------
+if "user_email" not in st.session_state or not st.session_state.user_email:
+    login_page()
+    st.stop()
 
-    st.write("Enter skills and your proficiency (1-5):")
-    skills = {}
-    for i in range(3):
-        skill = st.text_input(f"Skill {i+1}", key=f"skill{i}")
-        level = st.slider(f"Proficiency Level {i+1}", 1, 5, 3, key=f"level{i}")
-        if skill:
-            skills[skill] = level
-    interests = st.text_input("Interests (comma-separated)")
-    goals = st.text_input("Career Goals")
+user_id = st.session_state.user_email
 
-    submit = st.button("Get Career Advice")
+# ------------------- PROFILE FORM -------------------
+st.header("📝 Profile Information")
 
+age = st.number_input("Age", 10, 60)
+location = st.text_input("City or State")
+education = st.text_input("Education Background")
+
+st.write("Enter skills and your proficiency (1-5):")
+skills = {}
+for i in range(3):
+    skill = st.text_input(f"Skill {i+1}", key=f"skill{i}")
+    level = st.slider(f"Proficiency Level {i+1}", 1, 5, 3, key=f"level{i}")
+    if skill:
+        skills[skill] = level
+
+interests = st.text_input("Interests (comma-separated)")
+goals = st.text_input("Career Goals")
+
+submit = st.button("Get Career Advice")
+
+# ------------------- AI RESPONSE -------------------
 if submit:
-    # Build prompt
     skills_text = ", ".join([f"{s} (level {l})" for s, l in skills.items()])
     prompt = f"""
-I am a {age}-year-old student from {location}, India. My education background: {education}. My skills with proficiency levels: {skills_text}. My interests include: {interests}. My career goals are: {goals}.
-Please provide the output in the following exact sections:
-===Career Suggestions=== Provide exactly 3 career suggestions, each as a bullet point like:
-Career Name: brief explanation.
-===Roadmap===
-[
-  {{
-    "step_number": 1,
-    "title": "Foundational Math & Statistics",
-    "description": "Strengthen linear algebra, calculus, probability, and statistics.",
-    "expected_duration_weeks": 8
-  }},
-  {{
-    "step_number": 2,
-    "title": "Python Programming for Data Science",
-    "description": "Master NumPy, Pandas, Matplotlib, Seaborn, and Scikit-learn.",
-    "expected_duration_weeks": 12
-  }},
-  {{
-    "step_number": 3,
-    "title": "Machine Learning Fundamentals",
-    "description": "Learn various ML algorithms (regression, classification, clustering).",
-    "expected_duration_weeks": 16
-  }},
-  {{
-    "step_number": 4,
-    "title": "Deep Learning (Optional but Recommended)",
-    "description": "Understand neural networks, CNNs, RNNs, and TensorFlow/PyTorch.",
-    "expected_duration_weeks": 12
-  }},
-  {{
-    "step_number": 5,
-    "title": "Data Visualization & Communication",
-    "description": "Improve data storytelling and presentation skills.",
-    "expected_duration_weeks": 4
-  }},
-  {{
-    "step_number": 6,
-    "title": "Capstone Project",
-    "description": "Work on a real-world data science project to showcase skills.",
-    "expected_duration_weeks": 12
-  }},
-  {{
-    "step_number": 7,
-    "title": "Job Search & Networking",
-    "description": "Prepare resume, portfolio, and network with professionals.",
-    "expected_duration_weeks": 8
-  }}
-]
-===Skill Gap Analysis & Practice Plan===
-Skills to Develop:
-- Advanced Python libraries (e.g., scikit-learn, TensorFlow, PyTorch)
-- Deep Learning techniques
-- Database management (SQL)
-- Big Data technologies (e.g., Spark, Hadoop - optional initially)
-- Data cleaning and preprocessing techniques
-- Model deployment and monitoring
-- Strong communication and presentation skills
+    I am a {age}-year-old student from {location}, India.
+    My education background: {education}.
+    My skills with proficiency levels: {skills_text}.
+    My interests include: {interests}.
+    My career goals are: {goals}.
+    Please provide the output in the following exact sections:
+    ===Career Suggestions===
+    Provide exactly 3 career suggestions, each as a bullet point like: Career Name: brief explanation.
+    ===Roadmap===
+    [ {{ "step_number": 1, "title": "Foundational Math & Statistics", "description": "Strengthen linear algebra, calculus, probability, and statistics.", "expected_duration_weeks": 8 }},
+      {{ "step_number": 2, "title": "Python Programming for Data Science", "description": "Master NumPy, Pandas, Matplotlib, Seaborn, and Scikit-learn.", "expected_duration_weeks": 12 }},
+      {{ "step_number": 3, "title": "Machine Learning Fundamentals", "description": "Learn various ML algorithms (regression, classification, clustering).", "expected_duration_weeks": 16 }},
+      {{ "step_number": 4, "title": "Deep Learning (Optional but Recommended)", "description": "Understand neural networks, CNNs, RNNs, and TensorFlow/PyTorch.", "expected_duration_weeks": 12 }},
+      {{ "step_number": 5, "title": "Data Visualization & Communication", "description": "Improve data storytelling and presentation skills.", "expected_duration_weeks": 4 }},
+      {{ "step_number": 6, "title": "Capstone Project", "description": "Work on a real-world data science project to showcase skills.", "expected_duration_weeks": 12 }},
+      {{ "step_number": 7, "title": "Job Search & Networking", "description": "Prepare resume, portfolio, and network with professionals.", "expected_duration_weeks": 8 }} ]
+    ===Skill Gap Analysis & Practice Plan===
+    Skills to Develop:
+    - Advanced Python libraries (e.g., scikit-learn, TensorFlow, PyTorch)
+    - Deep Learning techniques
+    - Database management (SQL)
+    - Big Data technologies (e.g., Spark, Hadoop - optional initially)
+    - Data cleaning and preprocessing techniques
+    - Model deployment and monitoring
+    - Strong communication and presentation skills
+    Practice Plan Checklist:
+    - Work on personal projects using publicly available datasets.
+    - Participate in Kaggle competitions to gain experience.
+    - Contribute to data science projects on GitHub.
+    - Showcase your projects and skills on a personal website or GitHub.
+    - Present your projects to friends, family, or online communities.
+    - Attend meetups and conferences related to data science.
+    ===Learning Resources===
+    List relevant courses, books, or tutorials as bullet points.
+    ===Practice Websites===
+    List practice websites with markdown links like [site](https://www.notion.so/url).
+    No extra text outside these sections.
+    """
 
-Practice Plan Checklist:
-- Work on personal projects using publicly available datasets.
-- Participate in Kaggle competitions to gain experience.
-- Contribute to data science projects on GitHub.
-- Showcase your projects and skills on a personal website or GitHub.
-- Present your projects to friends, family, or online communities.
-- Attend meetups and conferences related to data science.
-
-===Learning Resources=== List relevant courses, books, or tutorials as bullet points.
-===Practice Websites=== List practice websites with markdown links like [site](https://www.notion.so/url).
-
-No extra text outside these sections.
-"""
     ai_response = get_ai_response(prompt)
     sections = split_sections(ai_response)
 
-    # Show outputs in main section
+    # Show results
     st.header("AI-Powered Career Advisor Results")
-
     tabs = st.tabs(
-        [
-            "Career Suggestions",
-            "Roadmap",
-            "Skill Gap Analysis",
-            "Learning Resources",
-            "Practice Websites",
-            "Job Search Platforms",
-        ]
+        ["Career Suggestions", "Roadmap", "Skill Gap Analysis", "Learning Resources", "Practice Websites", "Job Search Platforms"]
     )
 
     with tabs[0]:
@@ -328,23 +362,19 @@ No extra text outside these sections.
         st.header("Skill Gap Analysis & Practice Plan")
         skill_gap_text = sections.get("skill_gap", "").strip()
         if skill_gap_text:
-            # Separate skills and checklist parts to render properly
             if "Practice Plan Checklist:" in skill_gap_text:
                 skills_part, checklist_part = skill_gap_text.split("Practice Plan Checklist:", 1)
             else:
                 skills_part, checklist_part = skill_gap_text, ""
 
-            # Show skills as markdown
             if skills_part.strip():
                 st.markdown(skills_part)
 
-            # Extract checklist items and render checkboxes with persistence
             checklist_items = get_checklist_items("Practice Plan Checklist:" + checklist_part)
             if checklist_items:
                 st.write("Practice Plan Checklist:")
                 checklist_with_persistence(checklist_items)
 
-            # Save/load buttons side by side
             col1, col2 = st.columns(2)
             with col1:
                 if st.button("Save Practice Progress"):
@@ -379,10 +409,13 @@ No extra text outside these sections.
     with tabs[5]:
         st.header("Job Search Platforms")
         if skills and location:
-            job_links = get_job_platform_links(", ".join([f"{s} (level {l})" for s, l in skills.items()]), location)
+            job_links = get_job_platform_links(
+                ", ".join([f"{s} (level {l})" for s, l in skills.items()]), location
+            )
             for platform, url in job_links.items():
                 st.markdown(f"- [{platform}]({url})", unsafe_allow_html=True)
         else:
             st.info("Enter skills and location to view job search platforms.")
+
 else:
     st.info("Fill profile and click 'Get Career Advice' to generate suggestions.")
