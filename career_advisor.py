@@ -101,7 +101,7 @@ if not st.session_state.logged_in:
         if username.strip() and email.strip():
             st.session_state.logged_in = True
             st.session_state.username = username
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.warning("Please fill in all fields")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -151,7 +151,7 @@ User Info:
 """
                     with st.spinner("Generating your personalized career advice..."):
                         st.session_state.sections = generate_gemini_response(prompt)
-                    st.experimental_rerun()
+                    st.rerun()
 
     # -------------------- Tabs --------------------
     if st.session_state.form_submitted:
