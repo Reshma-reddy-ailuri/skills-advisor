@@ -3,5 +3,4 @@ firebase-admin
 requests
 python-dotenv
 graphviz
-openai
 

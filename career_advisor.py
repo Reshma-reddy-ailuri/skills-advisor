@@ -1,14 +1,15 @@
 # skills_advisor.py
 import streamlit as st
 import os
+import requests
 from dotenv import load_dotenv
-import openai
 from graphviz import Digraph
+import json
 
 # -------------------- Load .env --------------------
 load_dotenv()
 API_KEY = os.getenv("REACT_APP_GEMINI_API_KEY")
-openai.api_key = API_KEY
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateText"
 
 # -------------------- CSS Styling --------------------
 st.markdown("""
@@ -56,50 +57,38 @@ def generate_graphviz_roadmap(steps):
     return dot
 
 def generate_gemini_response(prompt):
-    """Call Gemini API and split response into sections."""
+    """Call Gemini REST API and return structured sections."""
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "prompt": prompt,
+        "temperature": 0.7,
+        "max_output_tokens": 1200
+    }
     try:
-        response = openai.ChatCompletion.create(
-            model="gemini-pro",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7
-        )
-        text = response.choices[0].message['content'].strip()
-        # Default empty sections
-        sections = {
-            "career": "",
-            "roadmap": "",
-            "skill_gap": "",
-            "learning": "",
-            "practice_websites": "",
-            "job_platforms": ""
-        }
-        # Keywords to split sections
-        keys = {
-            "career": ["Career Suggestions", "Career:"],
-            "roadmap": ["Roadmap", "Career Roadmap"],
-            "skill_gap": ["Skill Gap", "Skills Gap"],
-            "learning": ["Learning Resources", "Learning:"],
-            "practice_websites": ["Practice Websites", "Practice:"],
-            "job_platforms": ["Job Platforms", "Job Search:"]
-        }
-        for key, kw_list in keys.items():
-            for kw in kw_list:
-                if kw.lower() in text.lower():
-                    idx = text.lower().find(kw.lower())
-                    next_idx = len(text)
-                    # find next keyword to slice
-                    for other_kw in sum([v for k,v in keys.items() if k != key], []):
-                        if other_kw.lower() in text.lower():
-                            tmp = text.lower().find(other_kw.lower())
-                            if tmp > idx:
-                                next_idx = min(next_idx, tmp)
-                    sections[key] = text[idx:next_idx].strip()
-                    break
-        if not any(sections.values()):
-            sections["career"] = text
+        res = requests.post(GEMINI_URL, headers=headers, data=json.dumps(payload))
+        res.raise_for_status()
+        data = res.json()
+        text = data.get("candidates", [{}])[0].get("content", "")
+        # Basic section split
+        sections = {"career":"","roadmap":"","skill_gap":"","learning":"","practice_websites":"","job_platforms":""}
+        lines = text.split("\n")
+        current_section = "career"
+        for line in lines:
+            line = line.strip()
+            if not line: continue
+            l_lower = line.lower()
+            if "roadmap" in l_lower: current_section="roadmap"; continue
+            elif "skill gap" in l_lower: current_section="skill_gap"; continue
+            elif "learning" in l_lower: current_section="learning"; continue
+            elif "practice" in l_lower: current_section="practice_websites"; continue
+            elif "job" in l_lower: current_section="job_platforms"; continue
+            sections[current_section] += line + "\n"
         return sections
     except Exception as e:
-        st.error(f"Error fetching Gemini response: {e}")
+        st.error(f"Error calling Gemini API: {e}")
         return {}
 
 # -------------------- Login Page --------------------
@@ -151,8 +140,7 @@ else:
                     st.session_state.form_submitted = True
 
                     prompt = f"""
-Provide career advice for a user with labeled sections:
-Career Suggestions, Roadmap, Skill Gap, Learning Resources, Practice Websites, Job Search Platforms.
+Provide career advice in labeled sections: Career Suggestions, Roadmap, Skill Gap, Learning Resources, Practice Websites, Job Search Platforms.
 User Info:
 - Age: {age}
 - Experience: {experience} years
@@ -161,22 +149,23 @@ User Info:
 - Education: {education}
 - Location: {location}
 """
-                    st.session_state.sections = generate_gemini_response(prompt)
+                    with st.spinner("Generating your personalized career advice..."):
+                        st.session_state.sections = generate_gemini_response(prompt)
                     st.rerun()
 
     # -------------------- Tabs --------------------
     if st.session_state.form_submitted:
         sections = st.session_state.sections
         st.header("AI-Powered Career Advisor Results")
-        tabs = st.tabs(["Career Suggestions", "Roadmap", "Skill Gap Analysis", "Learning Resources", "Practice Websites", "Job Search Platforms"])
+        tabs = st.tabs(["Career Suggestions","Roadmap","Skill Gap Analysis","Learning Resources","Practice Websites","Job Search Platforms"])
 
         with tabs[0]:
             st.header("Career Suggestions")
-            st.markdown(sections.get("career", "No career suggestions available."))
+            st.markdown(sections.get("career","No career suggestions available."))
 
         with tabs[1]:
             st.header("Career Roadmap")
-            roadmap_text = sections.get("roadmap", "")
+            roadmap_text = sections.get("roadmap","")
             if roadmap_text:
                 steps = [s.strip() for s in roadmap_text.replace("\n",",").split(",") if s.strip()]
                 roadmap_with_checkboxes(steps)
@@ -186,11 +175,11 @@ User Info:
 
         with tabs[2]:
             st.header("Skill Gap Analysis")
-            st.markdown(sections.get("skill_gap", "No skill gap analysis available."))
+            st.markdown(sections.get("skill_gap","No skill gap analysis available."))
 
         with tabs[3]:
             st.header("Learning Resources")
-            learning_text = sections.get("learning", "")
+            learning_text = sections.get("learning","")
             if learning_text:
                 render_badges([r.strip() for r in learning_text.split(",")])
             else:
@@ -198,7 +187,7 @@ User Info:
 
         with tabs[4]:
             st.header("Practice Websites")
-            practice_text = sections.get("practice_websites", "")
+            practice_text = sections.get("practice_websites","")
             if practice_text:
                 render_badges([l.strip() for l in practice_text.split(",")], badge_class="link-badge")
             else:
@@ -206,7 +195,7 @@ User Info:
 
         with tabs[5]:
             st.header("Job Search Platforms")
-            jobs_text = sections.get("job_platforms", "")
+            jobs_text = sections.get("job_platforms","")
             if jobs_text:
                 render_badges([l.strip() for l in jobs_text.split(",")], badge_class="link-badge")
             else:
