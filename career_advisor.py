@@ -182,7 +182,7 @@ if not st.session_state.logged_in:
         if username and email:
             st.session_state.logged_in = True
             st.session_state.username = username
-            st.experimental_rerun()
+            st.rerun()
         else:
             st.error("Please fill in all fields")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -219,7 +219,7 @@ else:
                 "skills": f"{skill_1} ({skill_1_level}), {skill_2} ({skill_2_level}), {skill_3} ({skill_3_level})"
             }
             st.session_state.show_results = True
-            st.experimental_rerun()
+            st.rerun()
 
     # -------------------- Results Tabs --------------------
     else:
@@ -265,4 +265,4 @@ else:
         # Option to go back and edit
         if st.button("Edit Profile Details"):
             st.session_state.show_results = False
-            st.experimental_rerun()
+            st.rerun()
