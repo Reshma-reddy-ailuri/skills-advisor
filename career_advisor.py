@@ -12,7 +12,7 @@ st.markdown("""
     .login-card {
         background: rgba(255,255,255,0.95);
         max-width: 400px;
-        margin: 80px auto;
+        margin: 100px auto;
         padding: 40px 30px;
         border-radius: 15px;
         box-shadow: 0px 8px 20px rgba(0,0,0,0.15);
@@ -107,13 +107,25 @@ st.markdown("""
         box-shadow: 0 4px 12px rgba(0,0,0,0.08);
     }
 
-    /* Scrollbar for overflow inside tabs if needed */
-    .stTabs [role="tabpanel"]::-webkit-scrollbar {
-        width: 8px;
+    /* Badge styling */
+    .badge {
+        display: inline-block;
+        background-color: #4a90e2;
+        color: white;
+        padding: 4px 10px;
+        margin: 2px 2px 2px 0;
+        border-radius: 12px;
+        font-size: 14px;
     }
-    .stTabs [role="tabpanel"]::-webkit-scrollbar-thumb {
-        background-color: rgba(74,144,226,0.3);
-        border-radius: 4px;
+
+    .checklist-badge {
+        display: inline-block;
+        background-color: #50e3c2;
+        color: white;
+        padding: 4px 10px;
+        margin: 2px 2px 2px 0;
+        border-radius: 12px;
+        font-size: 14px;
     }
 </style>
 """, unsafe_allow_html=True)
@@ -124,6 +136,26 @@ if "logged_in" not in st.session_state:
 
 if "practice_states" not in st.session_state:
     st.session_state.practice_states = {}
+
+if "form_submitted" not in st.session_state:
+    st.session_state.form_submitted = False
+
+# -------------------- Helper Functions --------------------
+def render_badges(items, badge_class="badge"):
+    """Render list of items as colored badges"""
+    badges_html = "".join([f"<span class='{badge_class}'>{item.strip()}</span>" for item in items])
+    st.markdown(badges_html, unsafe_allow_html=True)
+
+def checklist_with_persistence(items):
+    """Render checklist items with checkboxes and persist state"""
+    for i, item in enumerate(items):
+        key = f"checklist_{i}"
+        checked = st.session_state.practice_states.get(key, False)
+        st.session_state.practice_states[key] = st.checkbox(item, value=checked)
+
+# Example: parse checklist items
+def get_checklist_items(text):
+    return [line.strip("- ").strip() for line in text.split("\n") if line.strip()]
 
 # -------------------- Login Page --------------------
 if not st.session_state.logged_in:
@@ -137,9 +169,9 @@ if not st.session_state.logged_in:
         if username and email:
             st.session_state.logged_in = True
             st.session_state.username = username
-            st.rerun()
+            st.experimental_rerun()
         else:
-            st.error("Please fill in all fields")
+            st.warning("Please fill in all fields")
 
     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -152,99 +184,90 @@ else:
     )
 
     st.title(f"Welcome {st.session_state.username} 👋")
-    st.write("Explore your personalized AI-powered career advisor dashboard.")
+    st.write("Fill in your details to get personalized career advice.")
 
-    # -------------------- Tabs --------------------
-    st.header("AI-Powered Career Advisor Results")
+    # -------------------- Input Form --------------------
+    if not st.session_state.form_submitted:
+        with st.form("user_input_form"):
+            skills_input = st.text_input("Enter your skills (comma separated)")
+            target_role = st.text_input("Enter your target career role")
+            location = st.text_input("Enter your preferred job location")
 
-    tabs = st.tabs(
-        [
-            "Career Suggestions",
-            "Roadmap",
-            "Skill Gap Analysis",
-            "Learning Resources",
-            "Practice Websites",
-            "Job Search Platforms",
-        ]
-    )
+            submitted = st.form_submit_button("Get Career Advice")
 
-    # ---------------- Career Suggestions ----------------
-    with tabs[0]:
-        st.header("Career Suggestions")
-        career_text = sections.get("career", "").strip() if 'sections' in locals() else ""
-        if career_text:
-            render_career_suggestions(career_text) if 'render_career_suggestions' in locals() else None
-        else:
-            st.info("No career suggestions available.")
+            if submitted:
+                if skills_input.strip() and target_role.strip() and location.strip():
+                    st.session_state.skills_input = skills_input
+                    st.session_state.target_role = target_role
+                    st.session_state.location = location
+                    st.session_state.form_submitted = True
+                    st.experimental_rerun()
+                else:
+                    st.warning("Please fill in all fields to continue.")
 
-    # ---------------- Roadmap ----------------
-    with tabs[1]:
-        st.header("Career Roadmap")
-        roadmap_text = sections.get("roadmap", "").strip() if 'sections' in locals() else ""
-        if roadmap_text:
-            render_graphviz_roadmap(roadmap_text) if 'render_graphviz_roadmap' in locals() else None
-        else:
-            st.info("No roadmap data available.")
+    # -------------------- Render Tabs Only After Form Submission --------------------
+    if st.session_state.form_submitted:
 
-    # ---------------- Skill Gap Analysis ----------------
-    with tabs[2]:
-        st.header("Skill Gap Analysis & Practice Plan")
-        skill_gap_text = sections.get("skill_gap", "").strip() if 'sections' in locals() else ""
-        if skill_gap_text:
-            if "Practice Plan Checklist:" in skill_gap_text:
-                skills_part, checklist_part = skill_gap_text.split("Practice Plan Checklist:", 1)
-            else:
-                skills_part, checklist_part = skill_gap_text, ""
+        # -------------------- Tabs --------------------
+        st.header("AI-Powered Career Advisor Results")
 
-            if skills_part.strip():
-                st.markdown(skills_part)
+        tabs = st.tabs(
+            [
+                "Career Suggestions",
+                "Roadmap",
+                "Skill Gap Analysis",
+                "Learning Resources",
+                "Practice Websites",
+                "Job Search Platforms",
+            ]
+        )
 
-            checklist_items = get_checklist_items("Practice Plan Checklist:" + checklist_part) if 'get_checklist_items' in locals() else []
-            if checklist_items:
-                st.write("Practice Plan Checklist:")
-                checklist_with_persistence(checklist_items) if 'checklist_with_persistence' in locals() else None
+        # ---------------- Career Suggestions ----------------
+        with tabs[0]:
+            st.header("Career Suggestions")
+            skills_list = st.session_state.skills_input.split(",") if st.session_state.skills_input else []
+            st.info("Based on your skills, here are some career suggestions:")
+            render_badges(["Data Scientist", "Software Engineer", "AI/ML Engineer"])
 
-            col1, col2 = st.columns(2)
-            with col1:
-                if st.button("Save Practice Progress"):
-                    save_progress(user_id, st.session_state.practice_states) if 'save_progress' in locals() else None
-            with col2:
-                if st.button("Load Practice Progress"):
-                    loaded_states = load_progress(user_id) if 'load_progress' in locals() else None
-                    if loaded_states:
-                        st.session_state.practice_states = loaded_states
-                        st.experimental_rerun()
-                    else:
-                        st.warning("No saved progress found.")
-        else:
-            st.info("No skill gap analysis available.")
+        # ---------------- Roadmap ----------------
+        with tabs[1]:
+            st.header("Career Roadmap")
+            st.info("Roadmap will be generated here for your target role.")
 
-    # ---------------- Learning Resources ----------------
-    with tabs[3]:
-        st.header("Learning Resources")
-        learning_text = sections.get("learning", "").strip() if 'sections' in locals() else ""
-        if learning_text:
-            render_learning_resources(learning_text) if 'render_learning_resources' in locals() else None
-        else:
-            st.info("No learning resources provided.")
+        # ---------------- Skill Gap Analysis ----------------
+        with tabs[2]:
+            st.header("Skill Gap Analysis & Practice Plan")
+            st.info("Based on your target role, here are missing skills:")
+            missing_skills = ["Python", "SQL", "Cloud Computing"]
+            render_badges(missing_skills, badge_class="badge")
 
-    # ---------------- Practice Websites ----------------
-    with tabs[4]:
-        st.header("Practice Websites")
-        practice_websites_text = sections.get("practice_websites", "").strip() if 'sections' in locals() else ""
-        if practice_websites_text:
-            st.markdown(practice_websites_text, unsafe_allow_html=True)
-        else:
-            st.info("No practice websites listed.")
+            # Example practice checklist
+            checklist_items = ["Complete Python project", "Solve 50 SQL problems", "Deploy a cloud app"]
+            st.write("Practice Plan Checklist:")
+            checklist_with_persistence(checklist_items)
 
-    # ---------------- Job Search Platforms ----------------
-    with tabs[5]:
-        st.header("Job Search Platforms")
-        skills = st.session_state.get('skills', None)
-        location = st.session_state.get('location', None)
-        if skills and location:
-            job_links = get_job_platform_links(", ".join([f"{s} (level {l})" for s, l in skills.items()]), location) if 'get_job_platform_links' in locals() else {}
-            for platform, url in job_links.items():
-                st.markdown(f"- [{platform}]({url})", unsafe_allow_html=True)
-        else:
-            st.info("Enter skills and location to view job search platforms.")
+        # ---------------- Learning Resources ----------------
+        with tabs[3]:
+            st.header("Learning Resources")
+            learning_resources = [
+                "📘 Coursera – Machine Learning",
+                "📘 Udemy – Data Science Bootcamp",
+                "📘 Kaggle – Hands-on Projects"
+            ]
+            render_badges(learning_resources, badge_class="badge")
+
+        # ---------------- Practice Websites ----------------
+        with tabs[4]:
+            st.header("Practice Websites")
+            practice_websites = [
+                "https://leetcode.com",
+                "https://hackerrank.com",
+                "https://kaggle.com"
+            ]
+            render_badges(practice_websites, badge_class="badge")
+
+        # ---------------- Job Search Platforms ----------------
+        with tabs[5]:
+            st.header("Job Search Platforms")
+            job_platforms = ["LinkedIn", "Indeed", "Naukri"]
+            render_badges(job_platforms, badge_class="badge")
