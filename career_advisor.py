@@ -276,7 +276,7 @@ ai_response = get_ai_response(prompt)
 sections = split_sections(ai_response)
 
 # Debug to see raw roadmap if issues
-st.text_area("Raw roadmap data (please verify format):", sections.get("roadmap", ""), height=200)
+#st.text_area("Raw roadmap data (please verify format):", sections.get("roadmap", ""), height=200)
 
 tabs = st.tabs(
     [
