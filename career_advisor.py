@@ -53,10 +53,22 @@ def generate_gemini_response(prompt):
             messages=[{"role": "user", "content": prompt}],
             temperature=0.7
         )
-        return response.choices[0].message['content']
+        text = response.choices[0].message['content'].strip()
+        # Try parsing JSON, fallback to plain text
+        try:
+            return json.loads(text)
+        except:
+            return {
+                "career": text,
+                "roadmap": text,
+                "skill_gap": text,
+                "learning": text,
+                "practice_websites": text,
+                "job_platforms": text
+            }
     except Exception as e:
         st.error(f"Error fetching Gemini response: {e}")
-        return "{}"
+        return {}
 
 def generate_graphviz_roadmap(steps):
     dot = Digraph(comment="Career Roadmap")
@@ -87,6 +99,7 @@ else:
     st.title(f"Welcome {st.session_state.username} 👋")
     st.write("Fill in your details to get personalized career advice.")
 
+    # -------------------- Input Form --------------------
     if not st.session_state.form_submitted:
         with st.form("user_input_form"):
             age = st.number_input("Age", min_value=12, max_value=100, step=1)
@@ -118,21 +131,18 @@ else:
 
                     # -------------------- Generate Sections from Gemini --------------------
                     prompt = f"""
-                    Provide detailed career advice based on:
-                    Age: {age}
-                    Experience: {experience} years
-                    Skills: {st.session_state.skills_input}
-                    Target Role: {target_role}
-                    Education: {education}
-                    Location: {location}
-                    
-                    Format output as JSON with keys: career, roadmap, skill_gap, learning, practice_websites, job_platforms
-                    """
-                    response_text = generate_gemini_response(prompt)
-                    try:
-                        st.session_state.sections = json.loads(response_text)
-                    except:
-                        st.session_state.sections = {}
+Provide detailed career advice based on:
+- Age: {age}
+- Experience: {experience} years
+- Skills: {st.session_state.skills_input}
+- Target Role: {target_role}
+- Education: {education}
+- Location: {location}
+
+Return output as strict JSON with keys: career, roadmap, skill_gap, learning, practice_websites, job_platforms
+If a key cannot be filled, return empty string for it.
+"""
+                    st.session_state.sections = generate_gemini_response(prompt)
                     st.rerun()
 
     # -------------------- Tabs --------------------
@@ -143,8 +153,7 @@ else:
 
         with tabs[0]:
             st.header("Career Suggestions")
-            career_text = sections.get("career", "")
-            st.markdown(career_text if career_text else "No career suggestions available.")
+            st.markdown(sections.get("career", "No career suggestions available."))
 
         with tabs[1]:
             st.header("Career Roadmap")
@@ -158,15 +167,13 @@ else:
 
         with tabs[2]:
             st.header("Skill Gap Analysis")
-            skill_gap_text = sections.get("skill_gap", "")
-            st.markdown(skill_gap_text if skill_gap_text else "No skill gap analysis available.")
+            st.markdown(sections.get("skill_gap", "No skill gap analysis available."))
 
         with tabs[3]:
             st.header("Learning Resources")
             learning_text = sections.get("learning", "")
             if learning_text:
-                resources = [r.strip() for r in learning_text.split(",")]
-                render_badges(resources)
+                render_badges([r.strip() for r in learning_text.split(",")])
             else:
                 st.info("No learning resources provided.")
 
@@ -174,8 +181,7 @@ else:
             st.header("Practice Websites")
             practice_websites_text = sections.get("practice_websites", "")
             if practice_websites_text:
-                links = [l.strip() for l in practice_websites_text.split(",")]
-                render_badges(links, badge_class="link-badge")
+                render_badges([l.strip() for l in practice_websites_text.split(",")], badge_class="link-badge")
             else:
                 st.info("No practice websites listed.")
 
@@ -183,7 +189,6 @@ else:
             st.header("Job Search Platforms")
             job_platforms_text = sections.get("job_platforms", "")
             if job_platforms_text:
-                links = [l.strip() for l in job_platforms_text.split(",")]
-                render_badges(links, badge_class="link-badge")
+                render_badges([l.strip() for l in job_platforms_text.split(",")], badge_class="link-badge")
             else:
                 st.info("No job search platforms listed.")
