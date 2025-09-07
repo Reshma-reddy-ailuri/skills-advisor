@@ -1,37 +1,37 @@
 import streamlit as st
 from graphviz import Digraph
 
-# -------------------- CSS Styling with blurred background --------------------
+# -------------------- CSS Styling with background --------------------
 st.markdown("""
 <style>
-/* Full-page blurred background image */
-body::before {
-    content: "";
-    position: fixed;
-    top:0; left:0;
-    width:100%; height:100%;
+/* Full-page background for main app */
+[data-testid="stAppViewContainer"] {
     background: url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1350&q=80') no-repeat center center fixed;
     background-size: cover;
-    filter: blur(8px);
-    z-index: -1;
+    position: relative;
 }
 
-/* Card style for login, form, and results */
+/* Overlay for subtle dim */
+[data-testid="stAppViewContainer"]::before {
+    content: "";
+    position: absolute;
+    top:0; left:0;
+    width:100%; height:100%;
+    background-color: rgba(255,255,255,0.2);
+}
+
+/* Semi-transparent cards */
 .card {
-    background-color: rgba(255,255,255,0.9);
+    background-color: rgba(255, 255, 255, 0.85);
     border-radius: 15px;
     padding: 30px;
-    margin: 40px auto;
+    margin: 30px auto;
     max-width: 800px;
     box-shadow: 0 8px 20px rgba(0,0,0,0.15);
 }
 
-/* Headers inside cards */
-.card h2, .card h3 {
-    color: #333;
-}
-
-/* Inputs inside cards */
+/* Headers and inputs inside cards */
+.card h2, .card h3 { color: #333; }
 .card .stTextInput>div>div>input, 
 .card .stNumberInput>div>div>input, 
 .card .stSelectbox>div>div>div {
@@ -72,6 +72,13 @@ body::before {
 .badge { background-color: #e0f0ff; color: #007acc; }
 .link-badge { background-color: #f0f0f0; color: #0645AD; text-decoration: none; }
 
+/* Profile icon */
+.profile-icon {
+    position: fixed; top: 15px; right: 25px; font-size: 18px; background: #4CAF50;
+    width: 40px; height: 40px; border-radius: 50%; text-align: center;
+    line-height: 40px; font-weight: bold; color: white; z-index: 9999;
+}
+
 /* Role sections */
 .role-section { 
     margin-bottom: 15px; 
@@ -80,13 +87,6 @@ body::before {
     border-left: 4px solid #4CAF50; 
     border-radius: 8px; 
     box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-}
-
-/* Profile icon */
-.profile-icon {
-    position: fixed; top: 15px; right: 25px; font-size: 18px; background: #4CAF50;
-    width: 40px; height: 40px; border-radius: 50%; text-align: center;
-    line-height: 40px; font-weight: bold; color: white; z-index: 9999;
 }
 </style>
 """, unsafe_allow_html=True)
@@ -99,7 +99,7 @@ if "show_results" not in st.session_state:
 if "checklist_states" not in st.session_state:
     st.session_state.checklist_states = {}
 
-# -------------------- Mock Data Functions & Helpers --------------------
+# -------------------- Mock Data Functions --------------------
 def generate_mock_career_advice(user_data):
     return {
         "career": {
@@ -193,7 +193,7 @@ if not st.session_state.logged_in:
         if username and email:
             st.session_state.logged_in = True
             st.session_state.username = username
-            st.rerun()
+            st.experimental_rerun()
         else:
             st.error("Please fill in all fields")
     st.markdown('</div>', unsafe_allow_html=True)
@@ -230,19 +230,21 @@ else:
                 "education": education,
                 "experience": years_exp,
                 "target_role": target_role,
-                "skills": f"{skill_1} ({skill_1_level}), {skill_2} ({skill_2_level}), {skill_3} ({skill_3_level})"
+                "skills": {
+                    skill_1: skill_1_level,
+                    skill_2: skill_2_level,
+                    skill_3: skill_3_level
+                }
             }
             st.session_state.show_results = True
-            st.rerun()
+            st.experimental_rerun()
 
     # -------------------- Results Tabs --------------------
     else:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
         user_data = st.session_state.user_data
         sections = generate_mock_career_advice(user_data)
 
         st.header("AI-Powered Career Advisor Results")
-
         tabs = st.tabs([
             "Career Suggestions",
             "Roadmap",
@@ -253,32 +255,43 @@ else:
         ])
 
         with tabs[0]:
-            st.header("Career Suggestions")
-            render_career_suggestions(sections["career"])
+            career_text = sections.get("career", {})
+            if career_text:
+                render_career_suggestions(career_text)
+            else:
+                st.info("No career suggestions available.")
 
         with tabs[1]:
-            st.header("Career Roadmap")
-            render_graphviz_roadmap(sections["roadmap"])
+            roadmap_text = sections.get("roadmap", [])
+            if roadmap_text:
+                render_graphviz_roadmap(roadmap_text)
+            else:
+                st.info("No roadmap available.")
 
         with tabs[2]:
-            st.header("Skill Gap Analysis & Practice Plan")
-            st.markdown(sections["skill_gap"])
-            render_checklist(sections["skill_gap"])
+            skill_gap_text = sections.get("skill_gap", "")
+            if skill_gap_text:
+                render_checklist(skill_gap_text)
+            else:
+                st.info("No skill gap analysis available.")
 
         with tabs[3]:
-            st.header("Learning Resources")
-            render_badges(sections["learning"], badge_class="link-badge", clickable=True)
+            learning_text = sections.get("learning", [])
+            if learning_text:
+                render_badges(learning_text, badge_class="link-badge", clickable=True)
+            else:
+                st.info("No learning resources provided.")
 
         with tabs[4]:
-            st.header("Practice Websites")
-            render_badges(sections["practice_websites"], badge_class="link-badge", clickable=True)
+            practice_text = sections.get("practice_websites", [])
+            if practice_text:
+                render_badges(practice_text, badge_class="link-badge", clickable=True)
+            else:
+                st.info("No practice websites listed.")
 
         with tabs[5]:
-            st.header("Job Search Platforms")
-            render_badges(sections["job_platforms"], badge_class="link-badge", clickable=True)
-
-        # Option to go back and edit
-        if st.button("Edit Profile Details"):
-            st.session_state.show_results = False
-            st.rerun()
-        st.markdown('</div>', unsafe_allow_html=True)
+            job_text = sections.get("job_platforms", [])
+            if job_text:
+                render_badges(job_text, badge_class="link-badge", clickable=True)
+            else:
+                st.info("No job search platforms available.")
