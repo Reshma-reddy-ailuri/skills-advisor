@@ -8,7 +8,7 @@ import json
 # ------------------- Load .env --------------------
 
 load_dotenv()
-API_KEY = os.getenv("REACT_APP_GEMINI_API_KEY")
+API_KEY = os.getenv("API_KEY")
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateText"
 
 # ------------------- CSS Styling --------------------
