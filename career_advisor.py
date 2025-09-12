@@ -7,10 +7,9 @@ import json
 
 # ------------------- Load API Key --------------------
 load_dotenv()
-
-# 🔑 Look for API_KEY in both st.secrets and .env
 API_KEY = st.secrets.get("API_KEY", os.getenv("API_KEY"))
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateText"
+
 st.write("🔍 Debug - API_KEY from secrets:", st.secrets.get("API_KEY"))
 st.write("🔍 Debug - API_KEY from env:", os.getenv("API_KEY"))
 
@@ -61,20 +60,24 @@ def generate_graphviz_roadmap(steps):
 
 def generate_gemini_response(prompt):
     """Call Gemini REST API and return structured sections."""
-    url = f"{GEMINI_URL}?key={API_KEY}"
-    headers = {"Content-Type": "application/json"}
-    payload = {"contents": [{"parts": [{"text": prompt}]}]}
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "prompt": {"text": prompt},
+        "temperature": 0.7,
+        "maxOutputTokens": 600
+    }
+
     try:
-        res = requests.post(url, headers=headers, data=json.dumps(payload))
+        res = requests.post(GEMINI_URL, headers=headers, json=payload)
         res.raise_for_status()
         data = res.json()
 
-        text = (
-            data.get("candidates", [{}])[0]
-            .get("content", {})
-            .get("parts", [{}])[0]
-            .get("text", "")
-        )
+        text = ""
+        if "candidates" in data and len(data["candidates"]) > 0:
+            text = data["candidates"][0].get("content", "")
 
         if not text:
             st.warning("⚠️ Gemini returned an empty response.")
