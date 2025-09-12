@@ -10,6 +10,8 @@ import json
 load_dotenv()
 API_KEY = os.getenv("API_KEY")
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateText"
+API_KEY = st.secrets["API_KEY"]
+
 
 # ------------------- CSS Styling --------------------
 
