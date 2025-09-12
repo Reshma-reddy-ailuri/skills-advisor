@@ -59,15 +59,20 @@ def generate_graphviz_roadmap(steps):
     return dot
 
 def generate_gemini_response(prompt):
-    """Call Gemini REST API and return structured sections."""
+    """Call Gemini REST API (v1beta) and return structured sections."""
     headers = {
         "Authorization": f"Bearer {API_KEY}",
         "Content-Type": "application/json"
     }
     payload = {
-        "prompt": {"text": prompt},
         "temperature": 0.7,
-        "maxOutputTokens": 600
+        "maxOutputTokens": 600,
+        "candidateCount": 1,
+        "topP": 0.95,
+        "topK": 40,
+        "prompt": [
+            {"content": [{"type": "text", "text": prompt}]}
+        ]
     }
 
     try:
@@ -75,14 +80,19 @@ def generate_gemini_response(prompt):
         res.raise_for_status()
         data = res.json()
 
+        # Extract text
         text = ""
         if "candidates" in data and len(data["candidates"]) > 0:
-            text = data["candidates"][0].get("content", "")
+            content = data["candidates"][0].get("content", [])
+            for part in content:
+                if part.get("type") == "text":
+                    text += part.get("text", "")
 
         if not text:
-            st.warning("⚠️ Gemini returned an empty response.")
+            st.warning("⚠️ Gemini returned empty response.")
             return {}
 
+        # Split into sections
         sections = {
             "career": "",
             "roadmap": "",
@@ -93,7 +103,6 @@ def generate_gemini_response(prompt):
         }
         lines = text.split("\n")
         current_section = "career"
-
         for line in lines:
             line = line.strip()
             if not line:
