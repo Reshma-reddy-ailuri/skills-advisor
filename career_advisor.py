@@ -8,11 +8,12 @@ import json
 # ------------------- Load API Key --------------------
 load_dotenv()
 
-API_KEY = st.secrets.get("GEMINI_API_KEY", os.getenv("GEMINI_API_KEY"))
+# 🔑 Look for API_KEY in both st.secrets and .env
+API_KEY = st.secrets.get("API_KEY", os.getenv("API_KEY"))
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateText"
 
 if not API_KEY:
-    st.error("❌ API key not found. Please set GEMINI_API_KEY in .env (local) or Streamlit Secrets (cloud).")
+    st.error("❌ API key not found. Please set API_KEY in .env (local) or Streamlit Secrets (cloud).")
     st.stop()
 
 # ------------------- CSS Styling --------------------
@@ -81,7 +82,6 @@ def generate_gemini_response(prompt):
             st.warning("⚠️ Gemini returned an empty response.")
             return {}
 
-        # Split into labeled sections
         sections = {
             "career": "",
             "roadmap": "",
