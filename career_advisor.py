@@ -1,250 +1,181 @@
 import streamlit as st
+import os
+import requests
+from dotenv import load_dotenv
 from graphviz import Digraph
+import json
 
-# -------------------- CSS Styling with background --------------------
+# ------------------- Load .env --------------------
+
+load_dotenv()
+API_KEY = os.getenv("REACT_APP_GEMINI_API_KEY")
+GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateText"
+
+# ------------------- CSS Styling --------------------
+
 st.markdown("""
 <style>
-/* Full-page background for main app */
-[data-testid="stAppViewContainer"] {
-    background: url('https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcTbSVDRKJKOmio6hP8gXdPVxMp7ZJTFVbMtjQ&s') no-repeat center center fixed;
-    background-size: cover;
-    position: relative;
-}
-
-/* Overlay for subtle dim */
-[data-testid="stAppViewContainer"]::before {
-    content: "";
-    position: absolute;
-    top:0; left:0;
-    width:100%; height:100%;
-    background-color: rgba(255,255,255,0.2);
-}
-
-/* Semi-transparent cards */
-.card {
-    background-color: rgba(255, 255, 255, 0.85);
-    border-radius: 15px;
-    padding: 30px;
-    margin: 30px auto;
-    max-width: 800px;
-    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
-}
-
-/* Headers and inputs inside cards */
-.card h2, .card h3 { color: #333; }
-.card .stTextInput>div>div>input, 
-.card .stNumberInput>div>div>input, 
-.card .stSelectbox>div>div>div {
-    border-radius: 8px;
-    border: 1px solid #ccc;
-    padding: 10px;
-    font-size: 15px;
-    background-color: #f9f9f9;
-}
-
-/* Buttons */
-.card .stButton>button {
-    width: 100%;
-    padding: 10px;
-    border-radius: 8px;
-    background: #4CAF50;
-    color: white;
-    font-size: 16px;
-    border: none;
-}
-.card .stButton>button:hover { background: #45a049; }
-
-/* Tabs styling */
-.stTabs [role="tab"] {
-    font-weight: bold;
-    font-size: 16px;
-    color: #333;
-}
-
-/* Badge for links */
-.badge, .link-badge {
-    display: inline-block;
-    padding: 6px 12px;
-    margin: 3px;
-    border-radius: 8px;
-    font-size: 14px;
-}
-.badge { background-color: #e0f0ff; color: #007acc; }
-.link-badge { background-color: #f0f0f0; color: #0645AD; text-decoration: none; }
-
-/* Profile icon */
-.profile-icon {
-    position: fixed; top: 15px; right: 25px; font-size: 18px; background: #4CAF50;
-    width: 40px; height: 40px; border-radius: 50%; text-align: center;
-    line-height: 40px; font-weight: bold; color: white; z-index: 9999;
-}
-
-/* Role sections */
-.role-section { 
-    margin-bottom: 15px; 
-    padding: 15px; 
-    background-color: #ffffffdd; 
-    border-left: 4px solid #4CAF50; 
-    border-radius: 8px; 
-    box-shadow: 0 2px 4px rgba(0,0,0,0.08);
-}
+body { background: linear-gradient(135deg, #f0f4f8, #d9e2ec); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+.login-card { background: rgba(255,255,255,0.95); max-width: 500px; margin: 100px auto; padding: 40px 30px; border-radius: 15px; box-shadow: 0px 8px 20px rgba(0,0,0,0.15); text-align: center; position: relative; }
+.login-card::before { content: "💡"; font-size: 120px; color: rgba(74,144,226,0.08); position: absolute; top: 10px; right: 10px; z-index: 0; pointer-events: none; }
+.login-card h2 { margin-bottom: 25px; font-size: 24px; color: #333; position: relative; z-index: 1; }
+.stTextInput>div>div>input, .stNumberInput>div>div>input, select { border-radius: 8px; border: 1px solid #ccc; padding: 12px; font-size: 15px; }
+.stButton>button { width: 100%; padding: 12px; border-radius: 8px; background: #4a90e2; color: white; font-size: 16px; border: none; margin-top: 10px; }
+.stButton>button:hover { background: #357abd; }
+.profile-icon { position: fixed; top: 15px; right: 25px; font-size: 18px; background: #4a90e2; width: 45px; height: 45px; border-radius: 50%; text-align: center; line-height: 45px; font-weight: bold; color: white; z-index: 9999; box-shadow: 0 3px 8px rgba(0,0,0,0.2); }
+.stTabs [role="tab"] { font-weight: 600; font-size: 15px; }
+.stTabs [role="tabpanel"] { background: rgba(255,255,255,0.95); border-radius: 12px; padding: 20px; margin-top: 10px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+.badge { display: inline-block; background-color: #4a90e2; color: white; padding: 4px 10px; margin: 2px 2px 2px 0; border-radius: 12px; font-size: 14px; }
+.link-badge { display: inline-block; background-color: #f0f0f0; color: #333; padding: 4px 10px; margin: 2px 2px 2px 0; border-radius: 12px; font-size: 14px; text-decoration: none; }
 </style>
 """, unsafe_allow_html=True)
 
-# -------------------- Session State --------------------
+# ------------------- Session State --------------------
+
 if "logged_in" not in st.session_state:
     st.session_state.logged_in = False
-if "show_results" not in st.session_state:
-    st.session_state.show_results = False
-if "checklist_states" not in st.session_state:
-    st.session_state.checklist_states = {}
+if "form_submitted" not in st.session_state:
+    st.session_state.form_submitted = False
+if "sections" not in st.session_state:
+    st.session_state.sections = {}
 
-# -------------------- Mock Data Functions --------------------
-def generate_mock_career_advice(user_data):
-    return {
-        "career": {
-            "Data Scientist": {
-                "Description": "Analyze and interpret complex data to help organizations make informed decisions.",
-                "Required Skills": ["Python", "SQL", "Machine Learning", "Data Visualization"],
-                "Next Steps": ["Build ML projects", "Complete Kaggle competitions", "Learn Cloud deployment"]
-            },
-            "Machine Learning Engineer": {
-                "Description": "Design and deploy ML models into production systems.",
-                "Required Skills": ["Python", "TensorFlow/PyTorch", "SQL", "Model Deployment"],
-                "Next Steps": ["Work on end-to-end ML projects", "Learn Docker/Kubernetes"]
-            },
-            "AI Developer": {
-                "Description": "Develop AI-powered applications and tools.",
-                "Required Skills": ["Python", "NLP/Computer Vision", "Deep Learning", "APIs"],
-                "Next Steps": ["Build AI apps", "Contribute to open-source AI projects"]
-            }
-        },
-        "roadmap": [
-            "Learn Python basics",
-            "SQL fundamentals",
-            "Data Analysis projects",
-            "Machine Learning projects",
-            "Advanced ML techniques",
-            "Cloud deployment & portfolio building"
-        ],
-        "skill_gap": (
-            "- Missing skills: Cloud Computing, Advanced ML, Data Visualization\n"
-            "- Plan: Complete projects, take online courses, practice daily\n"
-            "Practice Plan Checklist:\n- [ ] Python Intermediate\n- [ ] SQL Advanced\n- [ ] ML Projects\n- [ ] Cloud Basics"
-        ),
-        "learning": [
-            ("Coursera – Machine Learning", "https://www.coursera.org/learn/machine-learning"),
-            ("Udemy – Data Science Bootcamp", "https://www.udemy.com/course/data-science-bootcamp/"),
-            ("Kaggle – Hands-on Projects", "https://www.kaggle.com/")
-        ],
-        "practice_websites": [
-            ("LeetCode", "https://leetcode.com/"),
-            ("HackerRank", "https://www.hackerrank.com/"),
-            ("Kaggle", "https://www.kaggle.com/")
-        ],
-        "job_platforms": [
-            ("LinkedIn Jobs", "https://www.linkedin.com/jobs/"),
-            ("Naukri.com", "https://www.naukri.com/"),
-            ("Indeed", "https://www.indeed.com/")
-        ]
-    }
+# ------------------- Helper Functions --------------------
 
-def render_badges(items, badge_class="badge", clickable=False):
+def render_badges(items, badge_class="badge"):
+    badges_html = ""
     for item in items:
-        if clickable and isinstance(item, tuple):
-            label, url = item
-            st.markdown(f'<a class="{badge_class}" href="{url}" target="_blank">{label}</a>', unsafe_allow_html=True)
-        else:
-            st.markdown(f'<span class="{badge_class}">{item if not isinstance(item, tuple) else item[0]}</span>', unsafe_allow_html=True)
+        badges_html += f"<span class='{badge_class}'>{item}</span>"
+    st.markdown(badges_html, unsafe_allow_html=True)
 
-def render_checklist(checklist_text):
-    for line in checklist_text.split("\n"):
-        line = line.strip()
-        if line.startswith("- [ ]"):
-            label = line[5:].strip()
-            checked = st.session_state.checklist_states.get(label, False)
-            st.session_state.checklist_states[label] = st.checkbox(label, value=checked)
+def roadmap_with_checkboxes(items):
+    for item in items:
+        st.checkbox(item)
 
-def render_graphviz_roadmap(roadmap_steps):
-    dot = Digraph(comment="Career Roadmap", format="png")
-    dot.attr(rankdir='TB', size='8')
-    for i, step in enumerate(roadmap_steps):
-        dot.node(str(i), step)
-    for i in range(len(roadmap_steps)-1):
-        dot.edge(str(i), str(i+1))
-    st.graphviz_chart(dot)
+def generate_graphviz_roadmap(steps):
+    """Enhanced roadmap with colored nodes and arrows."""
+    dot = Digraph(comment="Career Roadmap", format='png')
+    colors = ["#4a90e2", "#50e3c2", "#f5a623", "#9013fe", "#d0021b", "#7ed321"]
+    for i, step in enumerate(steps):
+        color = colors[i % len(colors)]
+        dot.node(str(i), step, style="filled", fillcolor=color, fontcolor="white", shape="box", fontsize="14")
+        if i > 0:
+            dot.edge(str(i-1), str(i), color="#333333", arrowsize="1.0")
+    return dot
 
-def render_career_suggestions(career_dict):
-    for role, details in career_dict.items():
-        st.markdown(f'<div class="role-section">', unsafe_allow_html=True)
-        st.subheader(role)
-        st.markdown(f"**Description:** {details['Description']}")
-        st.markdown("**Required Skills:** " + ", ".join(details["Required Skills"]))
-        st.markdown("**Next Steps:** " + " | ".join(details["Next Steps"]))
-        st.markdown('</div>', unsafe_allow_html=True)
+def generate_gemini_response(prompt):
+    """Call Gemini REST API and return structured sections."""
+    headers = {
+        "Authorization": f"Bearer {API_KEY}",
+        "Content-Type": "application/json"
+    }
+    payload = {
+        "prompt": prompt,
+        "temperature": 0.7,
+        "max_output_tokens": 1200
+    }
+    try:
+        res = requests.post(GEMINI_URL, headers=headers, data=json.dumps(payload))
+        res.raise_for_status()
+        data = res.json()
+        text = data.get("candidates", [{}])[0].get("content", "")
 
-# -------------------- Login Page --------------------
+        # Basic section split
+        sections = {"career": "", "roadmap": "", "skill_gap": "", "learning": "", "practice_websites": "", "job_platforms": ""}
+        lines = text.split("\n")
+        current_section = "career"
+
+        for line in lines:
+            line = line.strip()
+            if not line:
+                continue
+            l_lower = line.lower()
+            if "roadmap" in l_lower:
+                current_section = "roadmap"; continue
+            elif "skill gap" in l_lower:
+                current_section = "skill_gap"; continue
+            elif "learning" in l_lower:
+                current_section = "learning"; continue
+            elif "practice" in l_lower:
+                current_section = "practice_websites"; continue
+            elif "job" in l_lower:
+                current_section = "job_platforms"; continue
+            sections[current_section] += line + "\n"
+
+        return sections
+    except Exception as e:
+        st.error(f"Error calling Gemini API: {e}")
+        return {}
+
+# ------------------- Login Page --------------------
+
 if not st.session_state.logged_in:
-    st.markdown('<div class="card">', unsafe_allow_html=True)
+    st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.markdown("<h2>Login to Career Advisor</h2>", unsafe_allow_html=True)
     username = st.text_input("Username")
     email = st.text_input("Email")
     if st.button("Login"):
-        if username and email:
+        if username.strip() and email.strip():
             st.session_state.logged_in = True
             st.session_state.username = username
-            st.rerun()
+            st.experimental_rerun()
         else:
-            st.error("Please fill in all fields")
+            st.warning("Please fill in all fields")
     st.markdown('</div>', unsafe_allow_html=True)
 
-# -------------------- Main App --------------------
+# ------------------- Main App --------------------
+
 else:
     st.markdown(f'<div class="profile-icon">{st.session_state.username[0].upper()}</div>', unsafe_allow_html=True)
     st.title(f"Welcome {st.session_state.username} 👋")
-    st.write("Explore your personalized career advisor dashboard.")
+    st.write("Fill in your details to get personalized career advice.")
 
     # -------------------- Input Form --------------------
-    if not st.session_state.show_results:
-        st.markdown('<div class="card">', unsafe_allow_html=True)
-        st.header("Enter Your Profile Details")
+    if not st.session_state.form_submitted:
         with st.form("user_input_form"):
-            age = st.number_input("Age", min_value=10, max_value=100, value=25)
-            location = st.text_input("Location")
-            education = st.text_input("Education")
-            years_exp = st.number_input("Years of Experience", min_value=0, max_value=50, value=2)
-            target_role = st.text_input("Target Career Role")
-            skill_1 = st.text_input("Skill 1")
-            skill_1_level = st.selectbox("Skill 1 Proficiency", ["Beginner", "Intermediate", "Advanced"])
-            skill_2 = st.text_input("Skill 2")
-            skill_2_level = st.selectbox("Skill 2 Proficiency", ["Beginner", "Intermediate", "Advanced"])
-            skill_3 = st.text_input("Skill 3")
-            skill_3_level = st.selectbox("Skill 3 Proficiency", ["Beginner", "Intermediate", "Advanced"])
-            submit_btn = st.form_submit_button("Get Career Advice")
-        st.markdown('</div>', unsafe_allow_html=True)
+            age = st.number_input("Age", min_value=12, max_value=100, step=1)
+            experience = st.number_input("Years of Experience", min_value=0, max_value=50, step=1)
+            st.write("### Skills and Proficiency")
+            skill_1 = st.text_input("Skill 1 Name")
+            prof_1 = st.selectbox("Skill 1 Level", ["Beginner", "Intermediate", "Expert"])
+            skill_2 = st.text_input("Skill 2 Name")
+            prof_2 = st.selectbox("Skill 2 Level", ["Beginner", "Intermediate", "Expert"])
+            skill_3 = st.text_input("Skill 3 Name")
+            prof_3 = st.selectbox("Skill 3 Level", ["Beginner", "Intermediate", "Expert"])
+            target_role = st.text_input("Target Role / Career Goal")
+            education = st.text_input("Education Background")
+            location = st.text_input("Preferred Job Location")
+            submitted = st.form_submit_button("Get Career Advice")
 
-        if submit_btn:
-            st.session_state.user_data = {
-                "age": age,
-                "location": location,
-                "education": education,
-                "experience": years_exp,
-                "target_role": target_role,
-                "skills": {
-                    skill_1: skill_1_level,
-                    skill_2: skill_2_level,
-                    skill_3: skill_3_level
-                }
-            }
-            st.session_state.show_results = True
-            st.rerun()
+            if submitted:
+                if all([target_role.strip(), education.strip(), location.strip()]):
+                    st.session_state.age = age
+                    st.session_state.experience = experience
+                    st.session_state.target_role = target_role
+                    st.session_state.education = education
+                    st.session_state.location = location
+                    st.session_state.skills_input = f"{skill_1} ({prof_1}), {skill_2} ({prof_2}), {skill_3} ({prof_3})"
+                    st.session_state.form_submitted = True
 
-    # -------------------- Results Tabs --------------------
-    else:
-        user_data = st.session_state.user_data
-        sections = generate_mock_career_advice(user_data)
+                    prompt = f"""
+Provide career advice in labeled sections: Career Suggestions, Roadmap, Skill Gap, Learning Resources, Practice Websites, Job Search Platforms.
+User Info:
 
+- Age: {age}
+- Experience: {experience} years
+- Skills: {st.session_state.skills_input}
+- Target Role: {target_role}
+- Education: {education}
+- Location: {location}
+"""
+                    with st.spinner("Generating your personalized career advice..."):
+                        st.session_state.sections = generate_gemini_response(prompt)
+                    st.experimental_rerun()
+
+    # ------------------- Tabs --------------------
+    if st.session_state.form_submitted:
+        sections = st.session_state.sections
         st.header("AI-Powered Career Advisor Results")
+
         tabs = st.tabs([
             "Career Suggestions",
             "Roadmap",
@@ -255,43 +186,43 @@ else:
         ])
 
         with tabs[0]:
-            career_text = sections.get("career", {})
-            if career_text:
-                render_career_suggestions(career_text)
-            else:
-                st.info("No career suggestions available.")
+            st.header("Career Suggestions")
+            st.markdown(sections.get("career", "No career suggestions available."))
 
         with tabs[1]:
-            roadmap_text = sections.get("roadmap", [])
+            st.header("Career Roadmap")
+            roadmap_text = sections.get("roadmap", "")
             if roadmap_text:
-                render_graphviz_roadmap(roadmap_text)
+                steps = [s.strip() for s in roadmap_text.replace("\\n", ",").split(",") if s.strip()]
+                roadmap_with_checkboxes(steps)
+                st.graphviz_chart(generate_graphviz_roadmap(steps))
             else:
-                st.info("No roadmap available.")
+                st.info("No roadmap data available.")
 
         with tabs[2]:
-            skill_gap_text = sections.get("skill_gap", "")
-            if skill_gap_text:
-                render_checklist(skill_gap_text)
-            else:
-                st.info("No skill gap analysis available.")
+            st.header("Skill Gap Analysis")
+            st.markdown(sections.get("skill_gap", "No skill gap analysis available."))
 
         with tabs[3]:
-            learning_text = sections.get("learning", [])
+            st.header("Learning Resources")
+            learning_text = sections.get("learning", "")
             if learning_text:
-                render_badges(learning_text, badge_class="link-badge", clickable=True)
+                render_badges([r.strip() for r in learning_text.split(",")])
             else:
                 st.info("No learning resources provided.")
 
         with tabs[4]:
-            practice_text = sections.get("practice_websites", [])
+            st.header("Practice Websites")
+            practice_text = sections.get("practice_websites", "")
             if practice_text:
-                render_badges(practice_text, badge_class="link-badge", clickable=True)
+                render_badges([l.strip() for l in practice_text.split(",")], badge_class="link-badge")
             else:
                 st.info("No practice websites listed.")
 
         with tabs[5]:
-            job_text = sections.get("job_platforms", [])
-            if job_text:
-                render_badges(job_text, badge_class="link-badge", clickable=True)
+            st.header("Job Search Platforms")
+            jobs_text = sections.get("job_platforms", "")
+            if jobs_text:
+                render_badges([l.strip() for l in jobs_text.split(",")], badge_class="link-badge")
             else:
-                st.info("No job search platforms available.")
+                st.info("No job search platforms listed.")
