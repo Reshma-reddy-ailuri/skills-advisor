@@ -1,24 +1,39 @@
+# -*- coding: utf-8 -*-
 import os
 import streamlit as st
 import requests
-from dotenv import load_dotenv
-from graphviz import Digraph
 import json
+import pickle
+from graphviz import Digraph
+from google_auth_oauthlib.flow import InstalledAppFlow
+from google.auth.transport.requests import Request
 
-# ------------------- Load API Key --------------------
-load_dotenv()
-API_KEY = st.secrets.get("API_KEY", os.getenv("API_KEY"))
+# ------------------- OAuth 2.0 Setup --------------------
+SCOPES = ['https://www.googleapis.com/auth/cloud-platform']
+CREDENTIALS_FILE = 'credentials.json'  # Your OAuth 2.0 JSON file
+
+creds = None
+if os.path.exists('token.pickle'):
+    with open('token.pickle', 'rb') as token:
+        creds = pickle.load(token)
+
+if not creds or not creds.valid:
+    if creds and creds.expired and creds.refresh_token:
+        creds.refresh(Request())
+    else:
+        flow = InstalledAppFlow.from_client_secrets_file(CREDENTIALS_FILE, SCOPES)
+        creds = flow.run_local_server(port=0)
+    with open('token.pickle', 'wb') as token:
+        pickle.dump(creds, token)
+
+ACCESS_TOKEN = creds.token
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateText"
-
-st.write("🔍 Debug - API_KEY from secrets:", st.secrets.get("API_KEY"))
-st.write("🔍 Debug - API_KEY from env:", os.getenv("API_KEY"))
 
 # ------------------- CSS Styling --------------------
 st.markdown("""
 <style>
 body { background: linear-gradient(135deg, #f0f4f8, #d9e2ec); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
 .login-card { background: rgba(255,255,255,0.95); max-width: 500px; margin: 100px auto; padding: 40px 30px; border-radius: 15px; box-shadow: 0px 8px 20px rgba(0,0,0,0.15); text-align: center; position: relative; }
-.login-card::before { content: "💡"; font-size: 120px; color: rgba(74,144,226,0.08); position: absolute; top: 10px; right: 10px; z-index: 0; pointer-events: none; }
 .login-card h2 { margin-bottom: 25px; font-size: 24px; color: #333; position: relative; z-index: 1; }
 .stTextInput>div>div>input, .stNumberInput>div>div>input, select { border-radius: 8px; border: 1px solid #ccc; padding: 12px; font-size: 15px; }
 .stButton>button { width: 100%; padding: 12px; border-radius: 8px; background: #4a90e2; color: white; font-size: 16px; border: none; margin-top: 10px; }
@@ -59,40 +74,31 @@ def generate_graphviz_roadmap(steps):
     return dot
 
 def generate_gemini_response(prompt):
-    """Call Gemini REST API (v1beta) and return structured sections."""
     headers = {
-        "Authorization": f"Bearer {API_KEY}",
+        "Authorization": f"Bearer {ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
     payload = {
         "temperature": 0.7,
-        "maxOutputTokens": 600,
+        "maxOutputTokens": 500,
         "candidateCount": 1,
         "topP": 0.95,
         "topK": 40,
-        "prompt": [
-            {"content": [{"type": "text", "text": prompt}]}
-        ]
+        "prompt": [{"content":[{"type":"text","text": prompt}]}]
     }
-
     try:
         res = requests.post(GEMINI_URL, headers=headers, json=payload)
         res.raise_for_status()
         data = res.json()
-
-        # Extract text
         text = ""
         if "candidates" in data and len(data["candidates"]) > 0:
             content = data["candidates"][0].get("content", [])
             for part in content:
                 if part.get("type") == "text":
                     text += part.get("text", "")
-
         if not text:
-            st.warning("⚠️ Gemini returned empty response.")
+            st.warning("⚠️ Gemini returned an empty response.")
             return {}
-
-        # Split into sections
         sections = {
             "career": "",
             "roadmap": "",
@@ -105,23 +111,15 @@ def generate_gemini_response(prompt):
         current_section = "career"
         for line in lines:
             line = line.strip()
-            if not line:
-                continue
+            if not line: continue
             l_lower = line.lower()
-            if "roadmap" in l_lower:
-                current_section = "roadmap"; continue
-            elif "skill gap" in l_lower:
-                current_section = "skill_gap"; continue
-            elif "learning" in l_lower:
-                current_section = "learning"; continue
-            elif "practice" in l_lower:
-                current_section = "practice_websites"; continue
-            elif "job" in l_lower:
-                current_section = "job_platforms"; continue
+            if "roadmap" in l_lower: current_section="roadmap"; continue
+            elif "skill gap" in l_lower: current_section="skill_gap"; continue
+            elif "learning" in l_lower: current_section="learning"; continue
+            elif "practice" in l_lower: current_section="practice_websites"; continue
+            elif "job" in l_lower: current_section="job_platforms"; continue
             sections[current_section] += line + "\n"
-
         return sections
-
     except Exception as e:
         st.error(f"Error calling Gemini API: {e}")
         return {}
@@ -130,10 +128,8 @@ def generate_gemini_response(prompt):
 if not st.session_state.logged_in:
     st.markdown('<div class="login-card">', unsafe_allow_html=True)
     st.markdown("<h2>Login to Career Advisor</h2>", unsafe_allow_html=True)
-
     username = st.text_input("Username")
     email = st.text_input("Email")
-
     if st.button("Login"):
         if username.strip() and email.strip():
             st.session_state.logged_in = True
@@ -141,7 +137,6 @@ if not st.session_state.logged_in:
             st.rerun()
         else:
             st.warning("Please fill in all fields")
-
     st.markdown('</div>', unsafe_allow_html=True)
 
 # ------------------- Main App --------------------
@@ -154,7 +149,6 @@ else:
         with st.form("user_input_form"):
             age = st.number_input("Age", min_value=12, max_value=100, step=1)
             experience = st.number_input("Years of Experience", min_value=0, max_value=50, step=1)
-
             st.write("### Skills and Proficiency")
             skill_1 = st.text_input("Skill 1 Name")
             prof_1 = st.selectbox("Skill 1 Level", ["Beginner", "Intermediate", "Expert"])
@@ -162,13 +156,10 @@ else:
             prof_2 = st.selectbox("Skill 2 Level", ["Beginner", "Intermediate", "Expert"])
             skill_3 = st.text_input("Skill 3 Name")
             prof_3 = st.selectbox("Skill 3 Level", ["Beginner", "Intermediate", "Expert"])
-
             target_role = st.text_input("Target Role / Career Goal")
             education = st.text_input("Education Background")
             location = st.text_input("Preferred Job Location")
-
             submitted = st.form_submit_button("Get Career Advice")
-
             if submitted:
                 if all([target_role.strip(), education.strip(), location.strip()]):
                     st.session_state.age = age
