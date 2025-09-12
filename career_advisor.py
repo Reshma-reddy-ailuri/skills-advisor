@@ -61,26 +61,39 @@ def generate_graphviz_roadmap(steps):
         if i > 0:
             dot.edge(str(i-1), str(i), color="#333333", arrowsize="1.0")
     return dot
-
 def generate_gemini_response(prompt):
     """Call Gemini REST API and return structured sections."""
-    headers = {
-        "Authorization": f"Bearer {API_KEY}",
-        "Content-Type": "application/json"
-    }
+    url = f"{GEMINI_URL}?key={API_KEY}"
+    headers = {"Content-Type": "application/json"}
     payload = {
-        "prompt": prompt,
-        "temperature": 0.7,
-        "max_output_tokens": 1200
+        "contents": [{"parts": [{"text": prompt}]}]
     }
     try:
-        res = requests.post(GEMINI_URL, headers=headers, data=json.dumps(payload))
+        res = requests.post(url, headers=headers, data=json.dumps(payload))
         res.raise_for_status()
         data = res.json()
-        text = data.get("candidates", [{}])[0].get("content", "")
+
+        # ✅ Correct way to extract text
+        text = (
+            data.get("candidates", [{}])[0]
+            .get("content", {})
+            .get("parts", [{}])[0]
+            .get("text", "")
+        )
+
+        if not text:
+            st.warning("Gemini returned an empty response.")
+            return {}
 
         # Basic section split
-        sections = {"career": "", "roadmap": "", "skill_gap": "", "learning": "", "practice_websites": "", "job_platforms": ""}
+        sections = {
+            "career": "",
+            "roadmap": "",
+            "skill_gap": "",
+            "learning": "",
+            "practice_websites": "",
+            "job_platforms": "",
+        }
         lines = text.split("\n")
         current_section = "career"
 
@@ -102,6 +115,7 @@ def generate_gemini_response(prompt):
             sections[current_section] += line + "\n"
 
         return sections
+
     except Exception as e:
         st.error(f"Error calling Gemini API: {e}")
         return {}
