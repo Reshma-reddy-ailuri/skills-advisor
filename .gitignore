@@ -1,4 +1,5 @@
 # Ignore environment variables file
+client_secret_*.json
 .env
 
 # Ignore Python virtual environment folder
