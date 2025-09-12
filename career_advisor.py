@@ -11,10 +11,8 @@ load_dotenv()
 # 🔑 Look for API_KEY in both st.secrets and .env
 API_KEY = st.secrets.get("API_KEY", os.getenv("API_KEY"))
 GEMINI_URL = "https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateText"
-
-if not API_KEY:
-    st.error("❌ API key not found. Please set API_KEY in .env (local) or Streamlit Secrets (cloud).")
-    st.stop()
+st.write("🔍 Debug - API_KEY from secrets:", st.secrets.get("API_KEY"))
+st.write("🔍 Debug - API_KEY from env:", os.getenv("API_KEY"))
 
 # ------------------- CSS Styling --------------------
 st.markdown("""
